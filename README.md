@@ -1,5 +1,6 @@
 # openapi-generator-core
 
+[![CI](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml/badge.svg)](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Java 21](https://img.shields.io/badge/Java-21-blue?logo=openjdk)](https://openjdk.org/projects/jdk/21/)
 [![Spring](https://img.shields.io/badge/Spring-6DB33F?logo=spring&logoColor=white)](https://spring.io)
