@@ -62,7 +62,7 @@ OpenApiWriter             → serialises to YAML or JSON
 # Install the parent POM first
 mvn install -f ../openapi-generator-parent/pom.xml
 
-# Build and install this module
+# Build and install this project
 mvn install
 ```
 
