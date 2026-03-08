@@ -14,6 +14,7 @@ This module contains all the logic: classpath scanning, annotation resolution, t
 
 ## Table of Contents
 
+- [Quickstart](#quickstart)
 - [How It Works](#how-it-works)
 - [Prerequisites](#prerequisites)
 - [Building](#building)
@@ -24,6 +25,49 @@ This module contains all the logic: classpath scanning, annotation resolution, t
 - [Schema Type Handlers](#schema-type-handlers)
 - [Post-Processors](#post-processors)
 - [License](#license)
+
+---
+
+## Quickstart
+
+This example shows how to go from a Spring MVC controller to a generated `openapi.yaml` in three steps.
+
+### 1. Add the parent POM
+
+```xml
+<parent>
+  <groupId>io.github.rspereiratech</groupId>
+  <artifactId>openapi-generator-parent</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+</parent>
+```
+
+### 2. Add the dependency
+
+```xml
+<dependency>
+  <groupId>io.github.rspereiratech</groupId>
+  <artifactId>openapi-generator-core</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+### 3. Call the generator
+
+```java
+GeneratorConfig config = GeneratorConfig.builder()
+    .basePackages(List.of("com.example.controller"))
+    .outputFile("docs/swagger/openapi.yaml")
+    .title("My API")
+    .version("1.0.0")
+    .build();
+
+new OpenApiGeneratorImpl().generate(config, Thread.currentThread().getContextClassLoader());
+```
+
+That's it — `docs/swagger/openapi.yaml` is generated from your compiled controllers.
+
+> For Maven lifecycle integration (automatic generation on build), use the [`openapi-generator-maven-plugin`](https://github.com/rspereiratech/openapi-generator-maven-plugin) instead.
 
 ---
 
