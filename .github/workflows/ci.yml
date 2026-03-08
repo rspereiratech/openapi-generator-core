@@ -26,6 +26,7 @@ jobs:
         with:
           repository: rspereiratech/openapi-generator-parent
           path: openapi-generator-parent
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Install parent POM
         run: mvn install -f openapi-generator-parent/pom.xml -DskipTests
