@@ -1,0 +1,213 @@
+/*
+ *   ___                   _   ___ ___
+ *  / _ \ _ __  ___ _ _   /_\ | _ \_ _|
+ * | (_) | '_ \/ -_) ' \ / _ \|  _/| |
+ *  \___/| .__/\___|_||_/_/ \_\_| |___|   Generator
+ *       |_|
+ *
+ * MIT License - Copyright (c) 2026 Rui Pereira
+ * See LICENSE in the project root for full license information.
+ */
+package io.github.rspereiratech.openapi.generator.core.utils;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.util.List;
+
+class AnnotationAttributeUtilsTest {
+
+    // ==========================================================================
+    // Fixtures
+    // ==========================================================================
+
+    interface SampleApi {
+        @GetMapping("/item")
+        String read(@RequestParam String q);
+    }
+
+    static class SampleController implements SampleApi {
+        @Override
+        @GetMapping("/overridden")
+        public String read(@RequestParam String q) { return q; }
+    }
+
+    interface PathlessController {
+        @GetMapping
+        String noPath();
+    }
+
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface StringAttrAnnotation {
+        String label() default "";
+    }
+
+    @StringAttrAnnotation(label = "hello")
+    static class StringAttrClass {}
+
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface BooleanAttrAnnotation {
+        boolean active() default false;
+    }
+
+    @BooleanAttrAnnotation(active = true)
+    static class BooleanAttrClass {}
+
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface IntAttrAnnotation {
+        int count() default 0;
+        String label() default "";
+    }
+
+    @IntAttrAnnotation(count = 42, label = "test")
+    static class IntAttrClass {}
+
+    // ==========================================================================
+    // extractPath
+    // ==========================================================================
+
+    @Test
+    void extractPath_returnsValueAttribute() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        Assertions.assertNotNull(gm);
+        Assertions.assertEquals("/overridden", AnnotationAttributeUtils.extractPath(gm));
+    }
+
+    @Test
+    void extractPath_returnsPathAttributeWhenValueEmpty() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        // Get the interface annotation via getAllAnnotations
+        Annotation getMapping = AnnotationUtils.getAllAnnotations(method).stream()
+                .filter(a -> a.annotationType() == GetMapping.class)
+                .findFirst().orElseThrow();
+        Assertions.assertEquals("/overridden", AnnotationAttributeUtils.extractPath(getMapping));
+    }
+
+    @Test
+    void extractPath_returnsEmptyStringWhenNoPathDefined() throws Exception {
+        Method method = PathlessController.class.getMethod("noPath");
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        Assertions.assertNotNull(gm);
+        Assertions.assertEquals("", AnnotationAttributeUtils.extractPath(gm));
+    }
+
+    // ==========================================================================
+    // getStringArrayValue
+    // ==========================================================================
+
+    @Test
+    void getStringArrayValue_valueAttribute_returnsValues() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        List<String> values = AnnotationAttributeUtils.getStringArrayValue(gm, "value");
+        Assertions.assertEquals(List.of("/overridden"), values);
+    }
+
+    @Test
+    void getStringArrayValue_nonArrayAttribute_returnsEmptyList() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        List<String> values = AnnotationAttributeUtils.getStringArrayValue(gm, "produces");
+        Assertions.assertTrue(values.isEmpty(), "Empty String[] attribute must return empty list");
+    }
+
+    @Test
+    void getStringArrayValue_absentMethod_returnsEmptyList() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        List<String> values = AnnotationAttributeUtils.getStringArrayValue(gm, "nonExistentMethod");
+        Assertions.assertTrue(values.isEmpty(), "Absent method must return empty list");
+    }
+
+    // ==========================================================================
+    // getStringAttribute
+    // ==========================================================================
+
+    @Test
+    void getStringAttribute_existingStringAttribute_returnsValue() {
+        Annotation ann = StringAttrClass.class.getAnnotation(StringAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertEquals("hello", AnnotationAttributeUtils.getStringAttribute(ann, "label"));
+    }
+
+    @Test
+    void getStringAttribute_nonStringAttribute_returnsEmptyString() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        Assertions.assertNotNull(gm);
+        Assertions.assertEquals("", AnnotationAttributeUtils.getStringAttribute(gm, "value"),
+                "getStringAttribute must return '' when the attribute type is not String");
+    }
+
+    @Test
+    void getStringAttribute_absentAttribute_returnsEmptyString() throws Exception {
+        Method method = SampleController.class.getMethod("read", String.class);
+        GetMapping gm = method.getAnnotation(GetMapping.class);
+        Assertions.assertEquals("", AnnotationAttributeUtils.getStringAttribute(gm, "nonExistentAttr"));
+    }
+
+    // ==========================================================================
+    // getBooleanAttribute
+    // ==========================================================================
+
+    @Test
+    void getBooleanAttribute_existingBooleanAttribute_returnsValue() {
+        Annotation ann = BooleanAttrClass.class.getAnnotation(BooleanAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertTrue(AnnotationAttributeUtils.getBooleanAttribute(ann, "active", false));
+    }
+
+    @Test
+    void getBooleanAttribute_absentAttribute_returnsDefault() {
+        Annotation ann = BooleanAttrClass.class.getAnnotation(BooleanAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertTrue(AnnotationAttributeUtils.getBooleanAttribute(ann, "nonExistent", true),
+                "Should return the supplied defaultValue when the attribute does not exist");
+    }
+
+    @Test
+    void getBooleanAttribute_absentAttributeDefaultFalse_returnsFalse() {
+        Annotation ann = BooleanAttrClass.class.getAnnotation(BooleanAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertFalse(AnnotationAttributeUtils.getBooleanAttribute(ann, "nonExistent", false));
+    }
+
+    // ==========================================================================
+    // getIntAttribute
+    // ==========================================================================
+
+    @Test
+    void getIntAttribute_existingIntAttribute_returnsValue() {
+        Annotation ann = IntAttrClass.class.getAnnotation(IntAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertEquals(42, AnnotationAttributeUtils.getIntAttribute(ann, "count", 0));
+    }
+
+    @Test
+    void getIntAttribute_absentAttribute_returnsDefault() {
+        Annotation ann = IntAttrClass.class.getAnnotation(IntAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertEquals(99, AnnotationAttributeUtils.getIntAttribute(ann, "nonExistent", 99),
+                "Absent attribute must return the supplied defaultValue");
+    }
+
+    @Test
+    void getIntAttribute_nonIntAttribute_returnsDefault() {
+        Annotation ann = IntAttrClass.class.getAnnotation(IntAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        Assertions.assertEquals(7, AnnotationAttributeUtils.getIntAttribute(ann, "label", 7),
+                "Non-int attribute must return the supplied defaultValue");
+    }
+}
