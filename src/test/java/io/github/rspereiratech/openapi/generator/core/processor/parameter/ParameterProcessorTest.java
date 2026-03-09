@@ -85,6 +85,10 @@ class ParameterProcessorTest {
         public void withPageable(
                 @io.swagger.v3.oas.annotations.Parameter(description = "Pagination parameters")
                 org.springframework.data.domain.Pageable pageable) {}
+
+        public void withHiddenPageable(
+                @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+                org.springframework.data.domain.Pageable pageable) {}
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -230,11 +234,16 @@ class ParameterProcessorTest {
     // ==========================================================================
 
     @Test
-    void swaggerParameter_hidden_addsXHiddenExtension() throws Exception {
+    void swaggerParameter_hidden_isExcluded() throws Exception {
         List<Parameter> params = processor.processParameters(method("withHiddenSwaggerParam", String.class));
-        assertEquals(1, params.size());
-        assertNotNull(params.get(0).getExtensions(), "Hidden param must have extensions");
-        assertEquals(true, params.get(0).getExtensions().get("x-hidden"));
+        assertTrue(params.isEmpty(), "Parameters with @Parameter(hidden = true) must be excluded");
+    }
+
+    @Test
+    void hiddenPageable_isExcluded() throws Exception {
+        List<Parameter> params = processor.processParameters(
+                method("withHiddenPageable", org.springframework.data.domain.Pageable.class));
+        assertTrue(params.isEmpty(), "Pageable with @Parameter(hidden = true) must be excluded");
     }
 
     // ==========================================================================

@@ -11,7 +11,6 @@
 package io.github.rspereiratech.openapi.generator.core.scanner;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,10 +20,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
@@ -187,47 +182,21 @@ class DefaultClasspathScannerTest {
     }
 
     @Test
-    void scan_samplePackage_findsKnownSampleControllers() throws Exception {
-        // Resolve a class-loader that can reach the sample module's compiled classes.
-        // Prefer the context class-loader (works when sample is a test-scope dependency);
-        // fall back to a URLClassLoader pointing at target/classes (works in IDE / single-module build).
-        ClassLoader sampleLoader = resolveSampleClassLoader();
-
+    void scan_fixturePackage_findsKnownControllers() throws Exception {
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
         DefaultClasspathScanner scanner = new DefaultClasspathScanner();
-        List<Class<?>> found = scanner.scan(List.of("io.github.rspereiratech.openapi.generator.samples"), sampleLoader, Set.of());
+        List<Class<?>> found = scanner.scan(
+                List.of("io.github.rspereiratech.openapi.generator.core.fixtures.integration"),
+                loader, Set.of());
 
         Assertions.assertNotNull(found);
-        Assertions.assertFalse(found.isEmpty(), "At least one controller must be found in io.github.rspereiratech.openapi.generator.samples");
+        Assertions.assertFalse(found.isEmpty(), "At least one controller must be found in the fixture package");
 
-        // Verify by simple name presence (avoids hard-coding class loading order)
-        List<String> simpleNames = found.stream()
-                .map(Class::getSimpleName)
-                .toList();
-
-        Assertions.assertTrue(simpleNames.contains("UserController"),     "UserController must be found");
-        Assertions.assertTrue(simpleNames.contains("ProductController"),  "ProductController must be found");
-        Assertions.assertTrue(simpleNames.contains("OrderController"),    "OrderController must be found");
-    }
-
-    private static ClassLoader resolveSampleClassLoader() throws Exception {
-        ClassLoader ctx = Thread.currentThread().getContextClassLoader();
-        try {
-            ctx.loadClass("io.github.rspereiratech.openapi.generator.samples.controller.UserController");
-            return ctx;
-        } catch (ClassNotFoundException ignored) { /* fall through to file-system fallback */ }
-
-        URL testClassesUrl = DefaultClasspathScannerTest.class
-                .getProtectionDomain().getCodeSource().getLocation();
-        Path sampleClasses = Path.of(testClassesUrl.toURI())
-                .getParent()   // test-classes → target
-                .getParent()   // target → openapi-generator-core
-                .getParent()   // openapi-generator-core → openapi-generator
-                .resolve("openapi-generator-samples/target/classes");
-
-        Assumptions.assumeTrue(Files.isDirectory(sampleClasses),
-                "Skipping: sample module not compiled yet. Run 'mvn install -DskipTests' first.");
-
-        return new URLClassLoader(new URL[]{sampleClasses.toUri().toURL()}, ctx);
+        List<String> simpleNames = found.stream().map(Class::getSimpleName).toList();
+        Assertions.assertTrue(simpleNames.contains("UserController"),        "UserController must be found");
+        Assertions.assertTrue(simpleNames.contains("ProductController"),     "ProductController must be found");
+        Assertions.assertTrue(simpleNames.contains("OrderController"),       "OrderController must be found");
+        Assertions.assertTrue(simpleNames.contains("NotificationController"),"NotificationController must be found");
     }
 
     // ==========================================================================

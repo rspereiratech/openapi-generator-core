@@ -120,6 +120,8 @@ public class ParameterProcessorImpl implements ParameterProcessor {
             return Optional.empty();
         }
 
+        if (isHiddenSwaggerAnnotation(annotations)) return Optional.empty();
+
         return Arrays.stream(annotations)
                 .filter(ann -> ANNOTATION_TO_LOCATION.containsKey(ann.annotationType().getSimpleName()))
                 .findFirst()
@@ -210,6 +212,8 @@ public class ParameterProcessorImpl implements ParameterProcessor {
      */
     private Optional<Parameter> buildPageableParameter(java.lang.reflect.Parameter param, int index, Annotation[] annotations) {
 
+        if (isHiddenSwaggerAnnotation(annotations)) return Optional.empty();
+
         schemaProcessor.toSchema(param.getType());
 
         String name = param.isNamePresent() ? param.getName() : "arg" + index;
@@ -223,6 +227,18 @@ public class ParameterProcessorImpl implements ParameterProcessor {
         enrichFromSwaggerAnnotation(parameter, annotations);
 
         return Optional.of(parameter);
+    }
+
+    /**
+     * Returns {@code true} if the parameter carries a {@code @io.swagger.v3.oas.annotations.Parameter}
+     * annotation with {@code hidden = true}.
+     */
+    private static boolean isHiddenSwaggerAnnotation(Annotation[] annotations) {
+        return Arrays.stream(annotations)
+                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameter"))
+                .findFirst()
+                .map(ann -> AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false))
+                .orElse(false);
     }
 
     /**
@@ -246,7 +262,6 @@ public class ParameterProcessorImpl implements ParameterProcessor {
 
                     if (!description.isBlank()) parameter.setDescription(description);
                     if (!example.isBlank())     parameter.setExample(example);
-                    if (hidden)                 parameter.addExtension("x-hidden", true);
                 });
     }
 

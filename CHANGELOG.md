@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.1.0] — 2026-03-09
+
+### Fixed
+
+- `ParameterProcessorImpl`: parameters annotated with `@Parameter(hidden = true)` are now omitted from the generated spec (aligns with SpringDoc behaviour); previously they were included with an `x-hidden: true` vendor extension
+
+---
+
 ## [1.0.1] — 2026-03-09
 
 ### Fixed

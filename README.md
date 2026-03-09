@@ -39,7 +39,7 @@ This example shows how to go from a Spring MVC controller to a generated `openap
 <parent>
   <groupId>io.github.rspereiratech</groupId>
   <artifactId>openapi-generator-parent</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.1.0-SNAPSHOT</version>
 </parent>
 ```
 
@@ -49,7 +49,7 @@ This example shows how to go from a Spring MVC controller to a generated `openap
 <dependency>
   <groupId>io.github.rspereiratech</groupId>
   <artifactId>openapi-generator-core</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.1.0-SNAPSHOT</version>
 </dependency>
 ```
 

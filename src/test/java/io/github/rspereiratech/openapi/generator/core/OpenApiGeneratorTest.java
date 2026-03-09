@@ -15,58 +15,17 @@ import io.github.rspereiratech.openapi.generator.core.config.OutputFormat;
 import io.github.rspereiratech.openapi.generator.core.config.SecuritySchemeConfig;
 import io.github.rspereiratech.openapi.generator.core.processor.DefaultProcessorFactory;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 
 class OpenApiGeneratorTest {
 
-    // ==========================================================================
-    // ClassLoader resolution
-    // ==========================================================================
-
-    private static ClassLoader resolveSampleClassLoader() throws Exception {
-        ClassLoader ctxLoader = Thread.currentThread().getContextClassLoader();
-
-        // Quick probe: if the sample class is already accessible, use the context loader.
-        try {
-            ctxLoader.loadClass("io.github.rspereiratech.openapi.generator.samples.controller.UserController");
-            return ctxLoader;
-        } catch (ClassNotFoundException ignored) {
-            // Fall through to file-system fallback
-        }
-
-        // Locate the sample module's target/classes directory relative to the
-        // openapi-generator-core module (two levels up from the core module directory).
-        // Structure: openapi-generator/
-        //              openapi-generator-core/  ← we are here
-        //              openapi-generator-samples/target/classes
-        URL coreClassesUrl = OpenApiGeneratorTest.class
-                .getProtectionDomain()
-                .getCodeSource()
-                .getLocation();
-
-        Path coreClasses = Path.of(coreClassesUrl.toURI());          // …/core/target/test-classes
-        Path sampleClasses = coreClasses
-                .getParent()                                          // …/core/target
-                .getParent()                                          // …/core
-                .getParent()                                          // …/openapi-generator
-                .resolve("openapi-generator-samples/target/classes");
-
-        Assumptions.assumeTrue(Files.isDirectory(sampleClasses),
-                "Skipping: sample module not compiled yet. Run 'mvn install -DskipTests' first.");
-
-        return new URLClassLoader(
-                new URL[]{sampleClasses.toUri().toURL()},
-                ctxLoader
-        );
-    }
+    private static final String FIXTURE_PACKAGE =
+            "io.github.rspereiratech.openapi.generator.core.fixtures.integration";
 
     // ==========================================================================
     // Tests
@@ -74,24 +33,16 @@ class OpenApiGeneratorTest {
 
     @Test
     void generate_sampleControllers_producesValidOpenApiYaml(@TempDir Path tempDir) throws Exception {
-        ClassLoader sampleLoader = resolveSampleClassLoader();
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
         GeneratorConfig config = GeneratorConfig.builder()
-                .basePackage("io.github.rspereiratech.openapi.generator.samples")
+                .basePackage(FIXTURE_PACKAGE)
                 .title("Integration Test API")
                 .version("1.0.0")
                 .outputFile(tempDir.resolve("openapi.yaml").toString())
                 .build();
 
-        // Set the context class-loader so that Jackson's ModelConverters can
-        // introspect the sample DTO classes when building component schemas.
-        ClassLoader originalLoader = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(sampleLoader);
-        try {
-            new OpenApiGeneratorImpl().generate(config, sampleLoader);
-        } finally {
-            Thread.currentThread().setContextClassLoader(originalLoader);
-        }
+        new OpenApiGeneratorImpl().generate(config, loader);
 
         Path outputFile = tempDir.resolve("openapi.yaml");
         Assertions.assertTrue(Files.exists(outputFile), "Output file must exist after generation");
@@ -105,7 +56,7 @@ class OpenApiGeneratorTest {
                 () -> Assertions.assertTrue(yaml.contains("openapi: 3.0.3"),
                         "Generated YAML must start with openapi: 3.0.3"),
 
-                // Paths for the four sample controllers
+                // Paths for the four fixture controllers
                 () -> Assertions.assertTrue(yaml.contains("/api/v1/users"),
                         "YAML must contain path /api/v1/users (UserController)"),
                 () -> Assertions.assertTrue(yaml.contains("/api/v1/products"),
@@ -113,12 +64,9 @@ class OpenApiGeneratorTest {
                 () -> Assertions.assertTrue(yaml.contains("/api/v1/orders"),
                         "YAML must contain path /api/v1/orders (OrderController)"),
                 () -> Assertions.assertTrue(yaml.contains("/api/v1/notifications"),
-                        "YAML must contain path /api/v1/notifications (EmailNotificationController)"),
+                        "YAML must contain path /api/v1/notifications (NotificationController)"),
 
-                // Component schemas for request-body types (response-only types such as
-                // UserDto and NotificationDto are not registered as $ref components because
-                // ModelConverters is invoked only for request bodies; response schemas from
-                // plain return-type inspection are not schema-registered separately).
+                // Component schemas for request-body types
                 () -> Assertions.assertTrue(yaml.contains("CreateUserRequest"),
                         "YAML must contain component schema CreateUserRequest (POST /users body)"),
                 () -> Assertions.assertTrue(yaml.contains("ProductDto"),
@@ -156,23 +104,15 @@ class OpenApiGeneratorTest {
 
     @Test
     void generate_withServerUrl_serverAppearsInYaml(@TempDir Path tempDir) throws Exception {
-        ClassLoader sampleLoader = resolveSampleClassLoader();
-
         GeneratorConfig config = GeneratorConfig.builder()
-                .basePackage("io.github.rspereiratech.openapi.generator.samples")
+                .basePackage(FIXTURE_PACKAGE)
                 .title("Server Test API")
                 .version("1.0.0")
                 .server("https://api.example.com", "Production")
                 .outputFile(tempDir.resolve("server.yaml").toString())
                 .build();
 
-        ClassLoader originalLoader = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(sampleLoader);
-        try {
-            new OpenApiGeneratorImpl().generate(config, sampleLoader);
-        } finally {
-            Thread.currentThread().setContextClassLoader(originalLoader);
-        }
+        new OpenApiGeneratorImpl().generate(config, Thread.currentThread().getContextClassLoader());
 
         String yaml = Files.readString(tempDir.resolve("server.yaml"));
         Assertions.assertTrue(yaml.contains("https://api.example.com"),
