@@ -111,7 +111,7 @@ Builds the `parameters` list for an operation. Handles:
 
 Builds the `responses` map for an operation.
 
-If `@ApiResponse` / `@ApiResponses` are present, they are used directly. Otherwise, the status code is resolved from `@ResponseStatus` or from HTTP method defaults:
+If `@ApiResponse` / `@ApiResponses` are present they are used directly. `@ApiResponse` annotations embedded in `@Operation(responses = …)` are also discovered and merged. Otherwise, the status code is resolved from `@ResponseStatus` or from HTTP method defaults:
 
 | HTTP Method | Default Status |
 |---|---|

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.1] — 2026-03-09
+
+### Fixed
+
+- `ResponseProcessorImpl`: `@ApiResponse` annotations declared inside `@Operation(responses = …)` are now discovered and registered (previously ignored)
+- `ResponseProcessorImpl`: response code `"default"` is now normalised to `200 OK` instead of being treated as a literal string
+- `ResponseProcessorImpl`: default media type changed from `application/json` to `*/*` to reflect the Spring MVC fall-through behaviour when no `produces` attribute is declared
+
+---
+
 ## [1.0.0] — 2026-03-08
 
 ### Added

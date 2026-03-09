@@ -56,7 +56,7 @@ import java.util.stream.Stream;
 @Slf4j
 public class ResponseProcessorImpl implements ResponseProcessor {
     /** Default media type applied when no {@code produces} attribute is declared on the handler method. */
-    private static final String DEFAULT_MEDIA_TYPE = "application/json";
+    private static final String DEFAULT_MEDIA_TYPE = "*/*";
     /** Shared {@link SchemaProcessor} used to derive response schemas from method return types. */
     private final SchemaProcessor    schemaProcessor;
     /** Strategy for resolving HTTP status codes and their descriptions. */
@@ -135,10 +135,15 @@ public class ResponseProcessorImpl implements ResponseProcessor {
                 .flatMap(ann -> unwrapApiResponses(ann).stream())
                 .toList();
 
-        Stream.concat(direct.stream(), fromContainer.stream())
+        List<Annotation> fromOperation = allAnnotations.stream()
+                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Operation"))
+                .flatMap(ann -> unwrapOperationResponses(ann).stream())
+                .toList();
+
+        Stream.concat(Stream.concat(direct.stream(), fromContainer.stream()), fromOperation.stream())
                 .forEach(ann -> addSwaggerApiResponse(ann, method, responses, typeVarMap));
 
-        return !direct.isEmpty() || !fromContainer.isEmpty();
+        return !direct.isEmpty() || !fromContainer.isEmpty() || !fromOperation.isEmpty();
     }
 
     /**
@@ -161,6 +166,26 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     }
 
     /**
+     * Extracts the {@code @ApiResponse} annotations declared in the {@code responses}
+     * attribute of a Swagger {@code @Operation} annotation.
+     *
+     * <p>Returns an empty list if the {@code responses} attribute cannot be read.</p>
+     *
+     * @param operationAnn the {@code @Operation} annotation instance; must not be {@code null}
+     * @return the unwrapped {@code @ApiResponse} annotations, or an empty list on failure
+     */
+    private List<Annotation> unwrapOperationResponses(Annotation operationAnn) {
+        try {
+            Annotation[] inner = (Annotation[]) operationAnn.annotationType()
+                    .getDeclaredMethod("responses").invoke(operationAnn);
+            return inner != null ? Arrays.asList(inner) : List.of();
+        } catch (Exception e) {
+            log.warn("Could not read 'responses' from @Operation: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
      * Builds and registers a single OpenAPI {@link ApiResponse} from a Swagger
      * {@code @ApiResponse} annotation instance.
      *
@@ -175,7 +200,8 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private void addSwaggerApiResponse(Annotation ann, Method method, ApiResponses responses,
                                         Map<TypeVariable<?>, Type> typeVarMap) {
         String responseCode = AnnotationAttributeUtils.getStringAttribute(ann, "responseCode");
-        if (responseCode.isBlank()) responseCode = String.valueOf(HttpStatus.OK.value());
+        if (responseCode.isBlank() || "default".equals(responseCode))
+            responseCode = String.valueOf(HttpStatus.OK.value());
 
         ApiResponse response = new ApiResponse()
                 .description(AnnotationAttributeUtils.getStringAttribute(ann, "description"));

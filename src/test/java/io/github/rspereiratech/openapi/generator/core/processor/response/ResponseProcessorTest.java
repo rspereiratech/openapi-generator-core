@@ -135,6 +135,16 @@ class ResponseProcessorTest {
                         schema = @io.swagger.v3.oas.annotations.media.Schema(
                                 implementation = Void.class)))
         public String apiResponseWithVoidSchemaImplementation() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.Operation(
+                responses = @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "200",
+                        content = @io.swagger.v3.oas.annotations.media.Content(
+                                mediaType = "application/json",
+                                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                        implementation = String.class))))
+        public String apiResponseNestedInOperation() { return ""; }
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -301,6 +311,26 @@ class ResponseProcessorTest {
                 method("apiResponseWithVoidSchemaImplementation"), "GET");
         assertNotNull(responses.get("200"),
                 "Response 200 must still be present even when implementation is Void.class");
+    }
+
+    // ==========================================================================
+    // @ApiResponse nested inside @Operation.responses
+    // ==========================================================================
+
+    @Test
+    void apiResponseNestedInOperation_responseCodePresent() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponseNestedInOperation"), "GET");
+        assertNotNull(responses.get("200"),
+                "Response 200 must be registered when @ApiResponse is nested inside @Operation.responses");
+    }
+
+    @Test
+    void apiResponseNestedInOperation_mediaTypeHonoured() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponseNestedInOperation"), "GET");
+        assertNotNull(responses.get("200").getContent().get("application/json"),
+                "Explicit mediaType from @Content inside @Operation.responses must be preserved");
     }
 
     // ==========================================================================
