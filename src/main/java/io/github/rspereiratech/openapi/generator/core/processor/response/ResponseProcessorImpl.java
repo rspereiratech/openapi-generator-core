@@ -17,6 +17,7 @@ import io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeU
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
@@ -242,6 +243,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * <p>Schema resolution order:
      * <ol>
      *   <li>{@code @Schema(implementation=...)} declared on the {@code @Content} annotation.</li>
+     *   <li>{@code @ArraySchema(schema=@Schema(implementation=...))} declared on the {@code @Content} annotation.</li>
      *   <li>Method return type, via {@link SchemaProcessor}.</li>
      * </ol>
      * Returns {@code null} if neither source yields a schema.
@@ -265,6 +267,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
             Schema<?> schema = schemaResult instanceof Annotation schemaAnn
                     ? schemaFromAnnotation(schemaAnn)
                     : null;
+            if (schema == null) schema = arraySchemaFromAnnotation(contentAnn);
             if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
             if (schema == null) return null;
 
@@ -274,6 +277,40 @@ public class ResponseProcessorImpl implements ResponseProcessor {
         } catch (Exception e) {
             log.warn("Could not read schema from @Content annotation: {}", e.getMessage());
             return buildContentFromReturnType(method, typeVarMap);
+        }
+    }
+
+    /**
+     * Reads the {@code array} attribute from a Swagger {@code @Content} annotation and
+     * returns an {@link ArraySchema} whose items are resolved from
+     * {@code @ArraySchema.schema.implementation}.
+     *
+     * <p>Returns {@code null} if the {@code array} attribute is absent, if
+     * {@code @ArraySchema.schema.implementation} is {@link Void}, or if any reflection
+     * step fails.</p>
+     *
+     * @param contentAnn the Swagger {@code @Content} annotation instance; must not be {@code null}
+     * @return an {@link ArraySchema} wrapping the item schema, or {@code null}
+     */
+    private Schema<?> arraySchemaFromAnnotation(Annotation contentAnn) {
+        try {
+            Object arrayResult = contentAnn.annotationType()
+                    .getDeclaredMethod("array").invoke(contentAnn);
+            if (!(arrayResult instanceof Annotation arrayAnn)) return null;
+
+            Object schemaResult = arrayAnn.annotationType()
+                    .getDeclaredMethod("schema").invoke(arrayAnn);
+            if (!(schemaResult instanceof Annotation schemaAnn)) return null;
+
+            Schema<?> itemSchema = schemaFromAnnotation(schemaAnn);
+            if (itemSchema == null) return null;
+
+            return new ArraySchema().items(itemSchema);
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        } catch (Exception e) {
+            log.warn("Could not read 'array' from @Content: {}", e.getMessage());
+            return null;
         }
     }
 

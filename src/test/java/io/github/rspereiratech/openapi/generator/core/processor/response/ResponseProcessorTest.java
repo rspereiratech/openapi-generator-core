@@ -11,6 +11,7 @@
 package io.github.rspereiratech.openapi.generator.core.processor.response;
 
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,6 +146,15 @@ class ResponseProcessorTest {
                                 schema = @io.swagger.v3.oas.annotations.media.Schema(
                                         implementation = String.class))))
         public String apiResponseNestedInOperation() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        array = @io.swagger.v3.oas.annotations.media.ArraySchema(
+                                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                        implementation = String.class))))
+        public void apiResponseWithArraySchema() {}
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -331,6 +341,37 @@ class ResponseProcessorTest {
                 method("apiResponseNestedInOperation"), "GET");
         assertNotNull(responses.get("200").getContent().get("application/json"),
                 "Explicit mediaType from @Content inside @Operation.responses must be preserved");
+    }
+
+    // ==========================================================================
+    // @ApiResponse with @ArraySchema
+    // ==========================================================================
+
+    @Test
+    void apiResponseWithArraySchema_responseCodePresent() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponseWithArraySchema"), "GET");
+        assertNotNull(responses.get("200"),
+                "Response 200 must be registered when @ArraySchema is used in @Content");
+    }
+
+    @Test
+    void apiResponseWithArraySchema_schemaIsArrayType() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponseWithArraySchema"), "GET");
+        assertNotNull(responses.get("200").getContent(), "Content must not be null");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertTrue(schema instanceof ArraySchema,
+                "Schema must be an ArraySchema when @Content(array=@ArraySchema(...)) is declared");
+    }
+
+    @Test
+    void apiResponseWithArraySchema_itemSchemaIsResolved() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponseWithArraySchema"), "GET");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertNotNull(((ArraySchema) schema).getItems(),
+                "ArraySchema items must be resolved from @ArraySchema.schema.implementation");
     }
 
     // ==========================================================================

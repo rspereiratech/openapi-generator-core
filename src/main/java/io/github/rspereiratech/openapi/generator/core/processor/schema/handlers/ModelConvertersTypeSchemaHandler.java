@@ -10,6 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema.handlers;
 
+import io.github.rspereiratech.openapi.generator.core.processor.schema.BeanValidationConstraintApplier;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.core.converter.ModelConverters;
@@ -53,6 +54,7 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
             }
 
             if (resolved.referencedSchemas != null) {
+                BeanValidationConstraintApplier.apply(type, resolved.referencedSchemas);
                 resolved.referencedSchemas.forEach((name, schema) ->
                         schemaProcessor.getSchemaRegistry().merge(
                                 name, schema, (existing, incoming) -> existing));
