@@ -29,12 +29,33 @@ import java.lang.reflect.Type;
  *
  * <p>Any referenced component schemas discovered during resolution are registered
  * in the schema registry via {@link SchemaProcessor#getSchemaRegistry()}.
+ * Bean Validation constraints are then propagated to those schemas via the
+ * supplied {@link BeanValidationConstraintApplier}.
  *
  * @author ruispereira
  */
 @Slf4j
 @SuppressWarnings("java:S1452")
 public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
+
+    private final BeanValidationConstraintApplier constraintApplier;
+
+    /**
+     * Creates an instance with the default {@link BeanValidationConstraintApplier}.
+     */
+    public ModelConvertersTypeSchemaHandler() {
+        this(new BeanValidationConstraintApplier());
+    }
+
+    /**
+     * Creates an instance with a custom {@link BeanValidationConstraintApplier}.
+     *
+     * @param constraintApplier the applier to use for Bean Validation propagation;
+     *                          must not be {@code null}
+     */
+    public ModelConvertersTypeSchemaHandler(BeanValidationConstraintApplier constraintApplier) {
+        this.constraintApplier = constraintApplier;
+    }
 
     @Override
     public boolean supports(Type type) {
@@ -54,7 +75,7 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
             }
 
             if (resolved.referencedSchemas != null) {
-                BeanValidationConstraintApplier.apply(type, resolved.referencedSchemas);
+                constraintApplier.apply(type, resolved.referencedSchemas);
                 resolved.referencedSchemas.forEach((name, schema) ->
                         schemaProcessor.getSchemaRegistry().merge(
                                 name, schema, (existing, incoming) -> existing));

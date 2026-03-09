@@ -41,6 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BeanValidationConstraintApplierTest {
 
+    private final BeanValidationConstraintApplier applier = new BeanValidationConstraintApplier();
+
     // ==========================================================================
     // Fixtures
     // ==========================================================================
@@ -158,21 +160,21 @@ class BeanValidationConstraintApplierTest {
     @Test
     void min_setsMinimumOnProperty() {
         var schemas = schemasFor(MinMaxDto.class);
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, schemas);
+        applier.apply(MinMaxDto.class, schemas);
         assertEquals(BigDecimal.valueOf(5), prop(schemas, MinMaxDto.class, "count").getMinimum());
     }
 
     @Test
     void max_setsMaximumOnProperty() {
         var schemas = schemasFor(MinMaxDto.class);
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, schemas);
+        applier.apply(MinMaxDto.class, schemas);
         assertEquals(BigDecimal.valueOf(100), prop(schemas, MinMaxDto.class, "limit").getMaximum());
     }
 
     @Test
     void min_doesNotAffectOtherProperties() {
         var schemas = schemasFor(MinMaxDto.class);
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, schemas);
+        applier.apply(MinMaxDto.class, schemas);
         assertNull(prop(schemas, MinMaxDto.class, "count").getMaximum());
     }
 
@@ -183,21 +185,21 @@ class BeanValidationConstraintApplierTest {
     @Test
     void decimalMin_setsMinimum() {
         var schemas = schemasFor(DecimalMinMaxDto.class);
-        BeanValidationConstraintApplier.apply(DecimalMinMaxDto.class, schemas);
+        applier.apply(DecimalMinMaxDto.class, schemas);
         assertEquals(new BigDecimal("1.5"), prop(schemas, DecimalMinMaxDto.class, "price").getMinimum());
     }
 
     @Test
     void decimalMax_setsMaximum() {
         var schemas = schemasFor(DecimalMinMaxDto.class);
-        BeanValidationConstraintApplier.apply(DecimalMinMaxDto.class, schemas);
+        applier.apply(DecimalMinMaxDto.class, schemas);
         assertEquals(new BigDecimal("9.9"), prop(schemas, DecimalMinMaxDto.class, "discount").getMaximum());
     }
 
     @Test
     void decimalMin_inclusive_doesNotSetExclusiveMinimum() {
         var schemas = schemasFor(DecimalMinMaxDto.class);
-        BeanValidationConstraintApplier.apply(DecimalMinMaxDto.class, schemas);
+        applier.apply(DecimalMinMaxDto.class, schemas);
         assertNull(prop(schemas, DecimalMinMaxDto.class, "price").getExclusiveMinimum(),
                 "inclusive=true (default) must not set exclusiveMinimum");
     }
@@ -205,7 +207,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void decimalMin_notInclusive_setsExclusiveMinimum() {
         var schemas = schemasFor(DecimalMinMaxExclusiveDto.class);
-        BeanValidationConstraintApplier.apply(DecimalMinMaxExclusiveDto.class, schemas);
+        applier.apply(DecimalMinMaxExclusiveDto.class, schemas);
         assertTrue(prop(schemas, DecimalMinMaxExclusiveDto.class, "price").getExclusiveMinimum(),
                 "inclusive=false must set exclusiveMinimum=true");
     }
@@ -213,7 +215,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void decimalMax_notInclusive_setsExclusiveMaximum() {
         var schemas = schemasFor(DecimalMinMaxExclusiveDto.class);
-        BeanValidationConstraintApplier.apply(DecimalMinMaxExclusiveDto.class, schemas);
+        applier.apply(DecimalMinMaxExclusiveDto.class, schemas);
         assertTrue(prop(schemas, DecimalMinMaxExclusiveDto.class, "discount").getExclusiveMaximum(),
                 "inclusive=false must set exclusiveMaximum=true");
     }
@@ -225,7 +227,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void size_setsMinLengthAndMaxLength() {
         var schemas = schemasFor(SizeDto.class);
-        BeanValidationConstraintApplier.apply(SizeDto.class, schemas);
+        applier.apply(SizeDto.class, schemas);
         assertAll(
                 () -> assertEquals(2,  prop(schemas, SizeDto.class, "name").getMinLength()),
                 () -> assertEquals(50, prop(schemas, SizeDto.class, "name").getMaxLength())
@@ -235,7 +237,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void size_minZero_doesNotSetMinLength() {
         var schemas = schemasFor(SizeMaxOnlyDto.class);
-        BeanValidationConstraintApplier.apply(SizeMaxOnlyDto.class, schemas);
+        applier.apply(SizeMaxOnlyDto.class, schemas);
         assertNull(prop(schemas, SizeMaxOnlyDto.class, "description").getMinLength(),
                 "min=0 (default) must not produce minLength");
     }
@@ -243,7 +245,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void size_maxIntegerMax_doesNotSetMaxLength() {
         var schemas = schemasFor(SizeMinOnlyDto.class);
-        BeanValidationConstraintApplier.apply(SizeMinOnlyDto.class, schemas);
+        applier.apply(SizeMinOnlyDto.class, schemas);
         assertNull(prop(schemas, SizeMinOnlyDto.class, "tag").getMaxLength(),
                 "max=Integer.MAX_VALUE (default) must not produce maxLength");
     }
@@ -255,28 +257,28 @@ class BeanValidationConstraintApplierTest {
     @Test
     void notNull_setsNullableFalse() {
         var schemas = schemasFor(NotNullDto.class);
-        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "required").getNullable());
     }
 
     @Test
     void notBlank_setsNullableFalse() {
         var schemas = schemasFor(NotNullDto.class);
-        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "nonBlank").getNullable());
     }
 
     @Test
     void notEmpty_setsNullableFalse() {
         var schemas = schemasFor(NotNullDto.class);
-        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "nonEmpty").getNullable());
     }
 
     @Test
     void notBlank_setsMinLengthOne() {
         var schemas = schemasFor(NotNullDto.class);
-        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
         assertEquals(1, prop(schemas, NotNullDto.class, "nonBlank").getMinLength(),
                 "@NotBlank on a String must set minLength=1");
     }
@@ -284,7 +286,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void notEmpty_onString_setsMinLengthOne() {
         var schemas = schemasFor(NotNullDto.class);
-        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
         assertEquals(1, prop(schemas, NotNullDto.class, "nonEmpty").getMinLength(),
                 "@NotEmpty on a String must set minLength=1");
     }
@@ -292,7 +294,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void notEmpty_onList_setsMinItemsOne() {
         var schemas = schemasFor(NotEmptyListDto.class);
-        BeanValidationConstraintApplier.apply(NotEmptyListDto.class, schemas);
+        applier.apply(NotEmptyListDto.class, schemas);
         assertEquals(1, prop(schemas, NotEmptyListDto.class, "tags").getMinItems(),
                 "@NotEmpty on a List must set minItems=1");
     }
@@ -300,7 +302,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void notNull_doesNotSetMinLength() {
         var schemas = schemasFor(NotNullDto.class);
-        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
         assertNull(prop(schemas, NotNullDto.class, "required").getMinLength(),
                 "@NotNull must not set minLength");
     }
@@ -312,7 +314,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void pattern_setsPatternOnProperty() {
         var schemas = schemasFor(PatternDto.class);
-        BeanValidationConstraintApplier.apply(PatternDto.class, schemas);
+        applier.apply(PatternDto.class, schemas);
         assertEquals("\\d{4}", prop(schemas, PatternDto.class, "year").getPattern());
     }
 
@@ -323,7 +325,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void email_setsFormatEmail() {
         var schemas = schemasFor(EmailDto.class);
-        BeanValidationConstraintApplier.apply(EmailDto.class, schemas);
+        applier.apply(EmailDto.class, schemas);
         assertEquals("email", prop(schemas, EmailDto.class, "address").getFormat());
     }
 
@@ -334,7 +336,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void positive_setsMinimumZeroAndExclusiveMinimum() {
         var schemas = schemasFor(PositiveDto.class);
-        BeanValidationConstraintApplier.apply(PositiveDto.class, schemas);
+        applier.apply(PositiveDto.class, schemas);
         Schema<?> prop = prop(schemas, PositiveDto.class, "positiveVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMinimum()),
@@ -345,7 +347,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void positiveOrZero_setsMinimumZeroWithoutExclusiveMinimum() {
         var schemas = schemasFor(PositiveDto.class);
-        BeanValidationConstraintApplier.apply(PositiveDto.class, schemas);
+        applier.apply(PositiveDto.class, schemas);
         Schema<?> prop = prop(schemas, PositiveDto.class, "positiveOrZeroVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMinimum()),
@@ -360,7 +362,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void negative_setsMaximumZeroAndExclusiveMaximum() {
         var schemas = schemasFor(NegativeDto.class);
-        BeanValidationConstraintApplier.apply(NegativeDto.class, schemas);
+        applier.apply(NegativeDto.class, schemas);
         Schema<?> prop = prop(schemas, NegativeDto.class, "negativeVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMaximum()),
@@ -371,7 +373,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void negativeOrZero_setsMaximumZeroWithoutExclusiveMaximum() {
         var schemas = schemasFor(NegativeDto.class);
-        BeanValidationConstraintApplier.apply(NegativeDto.class, schemas);
+        applier.apply(NegativeDto.class, schemas);
         Schema<?> prop = prop(schemas, NegativeDto.class, "negativeOrZeroVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMaximum()),
@@ -386,7 +388,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void size_onList_setsMinItemsAndMaxItems() {
         var schemas = schemasFor(SizeListDto.class);
-        BeanValidationConstraintApplier.apply(SizeListDto.class, schemas);
+        applier.apply(SizeListDto.class, schemas);
         Schema<?> prop = prop(schemas, SizeListDto.class, "tags");
         assertAll(
                 () -> assertEquals(1,  prop.getMinItems(), "minItems must be set for @Size on List"),
@@ -397,7 +399,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void size_onList_doesNotSetStringLengthFields() {
         var schemas = schemasFor(SizeListDto.class);
-        BeanValidationConstraintApplier.apply(SizeListDto.class, schemas);
+        applier.apply(SizeListDto.class, schemas);
         Schema<?> prop = prop(schemas, SizeListDto.class, "tags");
         assertAll(
                 () -> assertNull(prop.getMinLength(), "minLength must not be set for @Size on List"),
@@ -420,7 +422,7 @@ class BeanValidationConstraintApplierTest {
         Map<String, Schema<?>> schemas = new LinkedHashMap<>();
         schemas.put("ChildDto", childSchema);
 
-        BeanValidationConstraintApplier.apply(ChildDto.class, schemas);
+        applier.apply(ChildDto.class, schemas);
 
         assertAll(
                 () -> assertEquals(BigDecimal.valueOf(10),
@@ -439,7 +441,7 @@ class BeanValidationConstraintApplierTest {
     @Test
     void jsonProperty_usesSerializedNameAsKey() {
         var schemas = schemasFor(JsonPropertyDto.class);
-        BeanValidationConstraintApplier.apply(JsonPropertyDto.class, schemas);
+        applier.apply(JsonPropertyDto.class, schemas);
         Schema<?> prop = (Schema<?>) schemas.get("JsonPropertyDto").getProperties().get("search_offset");
         assertEquals(BigDecimal.valueOf(0), prop.getMinimum(),
                 "@Min must be applied to the property keyed by @JsonProperty value");
@@ -451,12 +453,12 @@ class BeanValidationConstraintApplierTest {
 
     @Test
     void apply_nullSchemas_doesNotThrow() {
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, null);
+        applier.apply(MinMaxDto.class, null);
     }
 
     @Test
     void apply_emptySchemas_doesNotThrow() {
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, new LinkedHashMap<String, Object>());
+        applier.apply(MinMaxDto.class, new LinkedHashMap<String, Object>());
     }
 
     @Test
@@ -464,7 +466,7 @@ class BeanValidationConstraintApplierTest {
         Schema<?> schema = new Schema<>(); // properties is null
         Map<String, Schema<?>> schemas = new LinkedHashMap<>();
         schemas.put("MinMaxDto", schema);
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, schemas);
+        applier.apply(MinMaxDto.class, schemas);
     }
 
     // ==========================================================================
@@ -492,7 +494,7 @@ class BeanValidationConstraintApplierTest {
         innerParent.setProperties(innerProps);
         schemas.put("MinMaxDto", innerParent);
 
-        BeanValidationConstraintApplier.apply(NestedDto.class, schemas);
+        applier.apply(NestedDto.class, schemas);
 
         assertAll(
                 () -> assertEquals(BigDecimal.valueOf(1),
