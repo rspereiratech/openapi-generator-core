@@ -55,6 +55,11 @@ class BeanValidationConstraintApplierTest {
             @DecimalMax("9.9") double discount
     ) {}
 
+    record DecimalMinMaxExclusiveDto(
+            @DecimalMin(value = "1.5", inclusive = false) double price,
+            @DecimalMax(value = "9.9", inclusive = false) double discount
+    ) {}
+
     record SizeDto(
             @Size(min = 2, max = 50) String name
     ) {}
@@ -71,6 +76,10 @@ class BeanValidationConstraintApplierTest {
             @NotNull  String required,
             @NotBlank String nonBlank,
             @NotEmpty String nonEmpty
+    ) {}
+
+    record NotEmptyListDto(
+            @NotEmpty List<String> tags
     ) {}
 
     record PatternDto(
@@ -185,6 +194,30 @@ class BeanValidationConstraintApplierTest {
         assertEquals(new BigDecimal("9.9"), prop(schemas, DecimalMinMaxDto.class, "discount").getMaximum());
     }
 
+    @Test
+    void decimalMin_inclusive_doesNotSetExclusiveMinimum() {
+        var schemas = schemasFor(DecimalMinMaxDto.class);
+        BeanValidationConstraintApplier.apply(DecimalMinMaxDto.class, schemas);
+        assertNull(prop(schemas, DecimalMinMaxDto.class, "price").getExclusiveMinimum(),
+                "inclusive=true (default) must not set exclusiveMinimum");
+    }
+
+    @Test
+    void decimalMin_notInclusive_setsExclusiveMinimum() {
+        var schemas = schemasFor(DecimalMinMaxExclusiveDto.class);
+        BeanValidationConstraintApplier.apply(DecimalMinMaxExclusiveDto.class, schemas);
+        assertTrue(prop(schemas, DecimalMinMaxExclusiveDto.class, "price").getExclusiveMinimum(),
+                "inclusive=false must set exclusiveMinimum=true");
+    }
+
+    @Test
+    void decimalMax_notInclusive_setsExclusiveMaximum() {
+        var schemas = schemasFor(DecimalMinMaxExclusiveDto.class);
+        BeanValidationConstraintApplier.apply(DecimalMinMaxExclusiveDto.class, schemas);
+        assertTrue(prop(schemas, DecimalMinMaxExclusiveDto.class, "discount").getExclusiveMaximum(),
+                "inclusive=false must set exclusiveMaximum=true");
+    }
+
     // ==========================================================================
     // @Size
     // ==========================================================================
@@ -238,6 +271,38 @@ class BeanValidationConstraintApplierTest {
         var schemas = schemasFor(NotNullDto.class);
         BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "nonEmpty").getNullable());
+    }
+
+    @Test
+    void notBlank_setsMinLengthOne() {
+        var schemas = schemasFor(NotNullDto.class);
+        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        assertEquals(1, prop(schemas, NotNullDto.class, "nonBlank").getMinLength(),
+                "@NotBlank on a String must set minLength=1");
+    }
+
+    @Test
+    void notEmpty_onString_setsMinLengthOne() {
+        var schemas = schemasFor(NotNullDto.class);
+        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        assertEquals(1, prop(schemas, NotNullDto.class, "nonEmpty").getMinLength(),
+                "@NotEmpty on a String must set minLength=1");
+    }
+
+    @Test
+    void notEmpty_onList_setsMinItemsOne() {
+        var schemas = schemasFor(NotEmptyListDto.class);
+        BeanValidationConstraintApplier.apply(NotEmptyListDto.class, schemas);
+        assertEquals(1, prop(schemas, NotEmptyListDto.class, "tags").getMinItems(),
+                "@NotEmpty on a List must set minItems=1");
+    }
+
+    @Test
+    void notNull_doesNotSetMinLength() {
+        var schemas = schemasFor(NotNullDto.class);
+        BeanValidationConstraintApplier.apply(NotNullDto.class, schemas);
+        assertNull(prop(schemas, NotNullDto.class, "required").getMinLength(),
+                "@NotNull must not set minLength");
     }
 
     // ==========================================================================
