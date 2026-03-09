@@ -14,23 +14,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Negative;
+import jakarta.validation.constraints.NegativeOrZero;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BeanValidationConstraintApplierTest {
 
@@ -70,6 +77,24 @@ class BeanValidationConstraintApplierTest {
             @Pattern(regexp = "\\d{4}") String year
     ) {}
 
+    record EmailDto(
+            @Email String address
+    ) {}
+
+    record PositiveDto(
+            @Positive       int positiveVal,
+            @PositiveOrZero int positiveOrZeroVal
+    ) {}
+
+    record NegativeDto(
+            @Negative       int negativeVal,
+            @NegativeOrZero int negativeOrZeroVal
+    ) {}
+
+    record SizeListDto(
+            @Size(min = 1, max = 10) List<String> tags
+    ) {}
+
     record JsonPropertyDto(
             @Min(0)
             @JsonProperty("search_offset") int offset
@@ -80,6 +105,14 @@ class BeanValidationConstraintApplierTest {
             @Min(1) int id,
             MinMaxDto inner
     ) {}
+
+    static class BaseDto {
+        @Min(10) int baseField;
+    }
+
+    static class ChildDto extends BaseDto {
+        @Max(99) int childField;
+    }
 
     // ==========================================================================
     // Helpers
@@ -216,6 +249,122 @@ class BeanValidationConstraintApplierTest {
         var schemas = schemasFor(PatternDto.class);
         BeanValidationConstraintApplier.apply(PatternDto.class, schemas);
         assertEquals("\\d{4}", prop(schemas, PatternDto.class, "year").getPattern());
+    }
+
+    // ==========================================================================
+    // @Email
+    // ==========================================================================
+
+    @Test
+    void email_setsFormatEmail() {
+        var schemas = schemasFor(EmailDto.class);
+        BeanValidationConstraintApplier.apply(EmailDto.class, schemas);
+        assertEquals("email", prop(schemas, EmailDto.class, "address").getFormat());
+    }
+
+    // ==========================================================================
+    // @Positive / @PositiveOrZero
+    // ==========================================================================
+
+    @Test
+    void positive_setsMinimumZeroAndExclusiveMinimum() {
+        var schemas = schemasFor(PositiveDto.class);
+        BeanValidationConstraintApplier.apply(PositiveDto.class, schemas);
+        Schema<?> prop = prop(schemas, PositiveDto.class, "positiveVal");
+        assertAll(
+                () -> assertEquals(BigDecimal.ZERO, prop.getMinimum()),
+                () -> assertTrue(prop.getExclusiveMinimum(), "exclusiveMinimum must be true for @Positive")
+        );
+    }
+
+    @Test
+    void positiveOrZero_setsMinimumZeroWithoutExclusiveMinimum() {
+        var schemas = schemasFor(PositiveDto.class);
+        BeanValidationConstraintApplier.apply(PositiveDto.class, schemas);
+        Schema<?> prop = prop(schemas, PositiveDto.class, "positiveOrZeroVal");
+        assertAll(
+                () -> assertEquals(BigDecimal.ZERO, prop.getMinimum()),
+                () -> assertNull(prop.getExclusiveMinimum(), "exclusiveMinimum must not be set for @PositiveOrZero")
+        );
+    }
+
+    // ==========================================================================
+    // @Negative / @NegativeOrZero
+    // ==========================================================================
+
+    @Test
+    void negative_setsMaximumZeroAndExclusiveMaximum() {
+        var schemas = schemasFor(NegativeDto.class);
+        BeanValidationConstraintApplier.apply(NegativeDto.class, schemas);
+        Schema<?> prop = prop(schemas, NegativeDto.class, "negativeVal");
+        assertAll(
+                () -> assertEquals(BigDecimal.ZERO, prop.getMaximum()),
+                () -> assertTrue(prop.getExclusiveMaximum(), "exclusiveMaximum must be true for @Negative")
+        );
+    }
+
+    @Test
+    void negativeOrZero_setsMaximumZeroWithoutExclusiveMaximum() {
+        var schemas = schemasFor(NegativeDto.class);
+        BeanValidationConstraintApplier.apply(NegativeDto.class, schemas);
+        Schema<?> prop = prop(schemas, NegativeDto.class, "negativeOrZeroVal");
+        assertAll(
+                () -> assertEquals(BigDecimal.ZERO, prop.getMaximum()),
+                () -> assertNull(prop.getExclusiveMaximum(), "exclusiveMaximum must not be set for @NegativeOrZero")
+        );
+    }
+
+    // ==========================================================================
+    // @Size on collections → minItems / maxItems
+    // ==========================================================================
+
+    @Test
+    void size_onList_setsMinItemsAndMaxItems() {
+        var schemas = schemasFor(SizeListDto.class);
+        BeanValidationConstraintApplier.apply(SizeListDto.class, schemas);
+        Schema<?> prop = prop(schemas, SizeListDto.class, "tags");
+        assertAll(
+                () -> assertEquals(1,  prop.getMinItems(), "minItems must be set for @Size on List"),
+                () -> assertEquals(10, prop.getMaxItems(), "maxItems must be set for @Size on List")
+        );
+    }
+
+    @Test
+    void size_onList_doesNotSetStringLengthFields() {
+        var schemas = schemasFor(SizeListDto.class);
+        BeanValidationConstraintApplier.apply(SizeListDto.class, schemas);
+        Schema<?> prop = prop(schemas, SizeListDto.class, "tags");
+        assertAll(
+                () -> assertNull(prop.getMinLength(), "minLength must not be set for @Size on List"),
+                () -> assertNull(prop.getMaxLength(), "maxLength must not be set for @Size on List")
+        );
+    }
+
+    // ==========================================================================
+    // Superclass field inheritance
+    // ==========================================================================
+
+    @Test
+    @SuppressWarnings("rawtypes")
+    void inheritedFields_constraintsApplied() {
+        Schema<?> childSchema = new Schema<>();
+        Map<String, Schema> props = new LinkedHashMap<>();
+        props.put("baseField",  new Schema());
+        props.put("childField", new Schema());
+        childSchema.setProperties(props);
+        Map<String, Schema<?>> schemas = new LinkedHashMap<>();
+        schemas.put("ChildDto", childSchema);
+
+        BeanValidationConstraintApplier.apply(ChildDto.class, schemas);
+
+        assertAll(
+                () -> assertEquals(BigDecimal.valueOf(10),
+                        ((Schema<?>) schemas.get("ChildDto").getProperties().get("baseField")).getMinimum(),
+                        "@Min on inherited BaseDto.baseField must be applied"),
+                () -> assertEquals(BigDecimal.valueOf(99),
+                        ((Schema<?>) schemas.get("ChildDto").getProperties().get("childField")).getMaximum(),
+                        "@Max on ChildDto.childField must be applied")
+        );
     }
 
     // ==========================================================================

@@ -30,7 +30,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -133,57 +132,18 @@ public class ResponseProcessorImpl implements ResponseProcessor {
 
         List<Annotation> fromContainer = allAnnotations.stream()
                 .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "ApiResponses"))
-                .flatMap(ann -> unwrapApiResponses(ann).stream())
+                .flatMap(ann -> AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "value").stream())
                 .toList();
 
         List<Annotation> fromOperation = allAnnotations.stream()
                 .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Operation"))
-                .flatMap(ann -> unwrapOperationResponses(ann).stream())
+                .flatMap(ann -> AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "responses").stream())
                 .toList();
 
         Stream.concat(Stream.concat(direct.stream(), fromContainer.stream()), fromOperation.stream())
                 .forEach(ann -> addSwaggerApiResponse(ann, method, responses, typeVarMap));
 
         return !direct.isEmpty() || !fromContainer.isEmpty() || !fromOperation.isEmpty();
-    }
-
-    /**
-     * Extracts the inner {@code @ApiResponse} annotations from an {@code @ApiResponses} container.
-     *
-     * <p>Returns an empty list if the {@code value} attribute cannot be read via reflection.</p>
-     *
-     * @param apiResponsesAnn the {@code @ApiResponses} annotation instance; must not be {@code null}
-     * @return the unwrapped annotations, or an empty list on failure
-     */
-    private List<Annotation> unwrapApiResponses(Annotation apiResponsesAnn) {
-        try {
-            Annotation[] inner = (Annotation[]) apiResponsesAnn.annotationType()
-                    .getDeclaredMethod("value").invoke(apiResponsesAnn);
-            return inner != null ? Arrays.asList(inner) : List.of();
-        } catch (Exception e) {
-            log.warn("Could not read 'value' from @ApiResponses: {}", e.getMessage());
-            return List.of();
-        }
-    }
-
-    /**
-     * Extracts the {@code @ApiResponse} annotations declared in the {@code responses}
-     * attribute of a Swagger {@code @Operation} annotation.
-     *
-     * <p>Returns an empty list if the {@code responses} attribute cannot be read.</p>
-     *
-     * @param operationAnn the {@code @Operation} annotation instance; must not be {@code null}
-     * @return the unwrapped {@code @ApiResponse} annotations, or an empty list on failure
-     */
-    private List<Annotation> unwrapOperationResponses(Annotation operationAnn) {
-        try {
-            Annotation[] inner = (Annotation[]) operationAnn.annotationType()
-                    .getDeclaredMethod("responses").invoke(operationAnn);
-            return inner != null ? Arrays.asList(inner) : List.of();
-        } catch (Exception e) {
-            log.warn("Could not read 'responses' from @Operation: {}", e.getMessage());
-            return List.of();
-        }
     }
 
     /**
@@ -225,16 +185,10 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * @return the resolved {@link Content}, or {@code null} if the return type yields no schema
      */
     private Content resolveContent(Annotation ann, Method method, Map<TypeVariable<?>, Type> typeVarMap) {
-        try {
-            Annotation[] contentArr = (Annotation[]) ann.annotationType()
-                    .getDeclaredMethod("content").invoke(ann);
-            return contentArr != null && contentArr.length > 0
-                    ? buildContentFromAnnotation(contentArr[0], method, typeVarMap)
-                    : buildContentFromReturnType(method, typeVarMap);
-        } catch (Exception e) {
-            log.warn("Could not read 'content' from @ApiResponse: {}", e.getMessage());
-            return buildContentFromReturnType(method, typeVarMap);
-        }
+        List<Annotation> contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "content");
+        return !contentArr.isEmpty()
+                ? buildContentFromAnnotation(contentArr.getFirst(), method, typeVarMap)
+                : buildContentFromReturnType(method, typeVarMap);
     }
 
     /**
@@ -257,27 +211,19 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     @SuppressWarnings("java:S1168") // null is intentional: signals "no body" (e.g. void return type)
     private Content buildContentFromAnnotation(Annotation contentAnn, Method method,
                                                 Map<TypeVariable<?>, Type> typeVarMap) {
-        try {
-            String mediaType = AnnotationAttributeUtils.getStringAttribute(contentAnn, "mediaType");
-            if (mediaType.isBlank()) mediaType = DEFAULT_MEDIA_TYPE;
+        String mediaType = AnnotationAttributeUtils.getStringAttribute(contentAnn, "mediaType");
+        if (mediaType.isBlank()) mediaType = DEFAULT_MEDIA_TYPE;
 
-            Object schemaResult = contentAnn.annotationType()
-                    .getDeclaredMethod("schema").invoke(contentAnn);
+        Schema<?> schema = AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
+                .map(this::schemaFromAnnotation)
+                .orElse(null);
+        if (schema == null) schema = arraySchemaFromAnnotation(contentAnn);
+        if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
+        if (schema == null) return null;
 
-            Schema<?> schema = schemaResult instanceof Annotation schemaAnn
-                    ? schemaFromAnnotation(schemaAnn)
-                    : null;
-            if (schema == null) schema = arraySchemaFromAnnotation(contentAnn);
-            if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
-            if (schema == null) return null;
-
-            Content content = new Content();
-            content.addMediaType(mediaType, new MediaType().schema(schema));
-            return content;
-        } catch (Exception e) {
-            log.warn("Could not read schema from @Content annotation: {}", e.getMessage());
-            return buildContentFromReturnType(method, typeVarMap);
-        }
+        Content content = new Content();
+        content.addMediaType(mediaType, new MediaType().schema(schema));
+        return content;
     }
 
     /**
@@ -286,52 +232,35 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * {@code @ArraySchema.schema.implementation}.
      *
      * <p>Returns {@code null} if the {@code array} attribute is absent, if
-     * {@code @ArraySchema.schema.implementation} is {@link Void}, or if any reflection
-     * step fails.</p>
+     * {@code @ArraySchema.schema.implementation} is {@link Void}, or if any step yields no schema.</p>
      *
      * @param contentAnn the Swagger {@code @Content} annotation instance; must not be {@code null}
      * @return an {@link ArraySchema} wrapping the item schema, or {@code null}
      */
+    @SuppressWarnings("java:S1168")
     private Schema<?> arraySchemaFromAnnotation(Annotation contentAnn) {
-        try {
-            Object arrayResult = contentAnn.annotationType()
-                    .getDeclaredMethod("array").invoke(contentAnn);
-            if (!(arrayResult instanceof Annotation arrayAnn)) return null;
-
-            Object schemaResult = arrayAnn.annotationType()
-                    .getDeclaredMethod("schema").invoke(arrayAnn);
-            if (!(schemaResult instanceof Annotation schemaAnn)) return null;
-
-            Schema<?> itemSchema = schemaFromAnnotation(schemaAnn);
-            if (itemSchema == null) return null;
-
-            return new ArraySchema().items(itemSchema);
-        } catch (NoSuchMethodException ignored) {
-            return null;
-        } catch (Exception e) {
-            log.warn("Could not read 'array' from @Content: {}", e.getMessage());
-            return null;
-        }
+        return AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "array")
+                .flatMap(arrayAnn -> AnnotationAttributeUtils.getAnnotationAttribute(arrayAnn, "schema"))
+                .map(this::schemaFromAnnotation)
+                .map(itemSchema -> (Schema<?>) new ArraySchema().items(itemSchema))
+                .orElse(null);
     }
 
     /**
      * Reads the {@code implementation} attribute from a Swagger {@code @Schema} annotation
      * and returns the corresponding OpenAPI {@link Schema}.
      *
-     * <p>Returns {@code null} if the implementation class is {@link Void}, absent,
-     * or cannot be read via reflection.</p>
+     * <p>Returns {@code null} if the implementation class is {@link Void} or absent.</p>
      *
      * @param schemaAnn the Swagger {@code @Schema} annotation instance; must not be {@code null}
      * @return the resolved {@link Schema}, or {@code null}
      */
+    @SuppressWarnings("java:S1168")
     private Schema<?> schemaFromAnnotation(Annotation schemaAnn) {
-        try {
-            Object impl = schemaAnn.annotationType().getDeclaredMethod("implementation").invoke(schemaAnn);
-            return impl instanceof Class<?> c && c != Void.class ? schemaProcessor.toSchema(c) : null;
-        } catch (Exception e) {
-            log.warn("Could not read 'implementation' from @Schema: {}", e.getMessage());
-            return null;
-        }
+        return AnnotationAttributeUtils.getClassAttribute(schemaAnn, "implementation")
+                .filter(c -> c != Void.class)
+                .map(schemaProcessor::toSchema)
+                .orElse(null);
     }
 
     // ------------------------------------------------------------------

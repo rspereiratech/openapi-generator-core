@@ -73,6 +73,28 @@ class AnnotationAttributeUtilsTest {
     @IntAttrAnnotation(count = 42, label = "test")
     static class IntAttrClass {}
 
+    // --- fixtures for annotation/class attribute tests ---
+
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface InnerAnnotation {
+        String value() default "";
+    }
+
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface AnnotationAttrAnnotation {
+        InnerAnnotation nested() default @InnerAnnotation("x");
+        InnerAnnotation[] nestedArray() default { @InnerAnnotation("a"), @InnerAnnotation("b") };
+        Class<?> impl() default Void.class;
+    }
+
+    @AnnotationAttrAnnotation(
+            nested = @InnerAnnotation("hello"),
+            nestedArray = { @InnerAnnotation("one"), @InnerAnnotation("two") },
+            impl = String.class)
+    static class AnnotationAttrClass {}
+
     // ==========================================================================
     // extractPath
     // ==========================================================================
@@ -209,5 +231,95 @@ class AnnotationAttributeUtilsTest {
         Assertions.assertNotNull(ann);
         Assertions.assertEquals(7, AnnotationAttributeUtils.getIntAttribute(ann, "label", 7),
                 "Non-int attribute must return the supplied defaultValue");
+    }
+
+    // ==========================================================================
+    // getAnnotationAttribute
+    // ==========================================================================
+
+    @Test
+    void getAnnotationAttribute_existingAnnotationAttribute_returnsPresent() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        var result = AnnotationAttributeUtils.getAnnotationAttribute(ann, "nested");
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertInstanceOf(InnerAnnotation.class, result.get());
+    }
+
+    @Test
+    void getAnnotationAttribute_absentAttribute_returnsEmpty() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        var result = AnnotationAttributeUtils.getAnnotationAttribute(ann, "nonExistent");
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getAnnotationAttribute_nonAnnotationAttribute_returnsEmpty() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        // "impl" is a Class<?>, not an Annotation
+        var result = AnnotationAttributeUtils.getAnnotationAttribute(ann, "impl");
+        Assertions.assertTrue(result.isEmpty(), "Class<?> attribute must not be returned as Annotation");
+    }
+
+    // ==========================================================================
+    // getAnnotationArrayAttribute
+    // ==========================================================================
+
+    @Test
+    void getAnnotationArrayAttribute_existingArrayAttribute_returnsList() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        var result = AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "nestedArray");
+        Assertions.assertEquals(2, result.size());
+        result.forEach(a -> Assertions.assertInstanceOf(InnerAnnotation.class, a));
+    }
+
+    @Test
+    void getAnnotationArrayAttribute_absentAttribute_returnsEmptyList() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        var result = AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "nonExistent");
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getAnnotationArrayAttribute_nonArrayAttribute_returnsEmptyList() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        // "nested" is a single Annotation, not Annotation[]
+        var result = AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "nested");
+        Assertions.assertTrue(result.isEmpty(), "Single-annotation attribute must not be returned as list");
+    }
+
+    // ==========================================================================
+    // getClassAttribute
+    // ==========================================================================
+
+    @Test
+    void getClassAttribute_existingClassAttribute_returnsPresent() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        var result = AnnotationAttributeUtils.getClassAttribute(ann, "impl");
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(String.class, result.get());
+    }
+
+    @Test
+    void getClassAttribute_absentAttribute_returnsEmpty() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        var result = AnnotationAttributeUtils.getClassAttribute(ann, "nonExistent");
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getClassAttribute_nonClassAttribute_returnsEmpty() {
+        Annotation ann = AnnotationAttrClass.class.getAnnotation(AnnotationAttrAnnotation.class);
+        Assertions.assertNotNull(ann);
+        // "nested" is an Annotation, not a Class<?>
+        var result = AnnotationAttributeUtils.getClassAttribute(ann, "nested");
+        Assertions.assertTrue(result.isEmpty(), "Annotation attribute must not be returned as Class<?>");
     }
 }

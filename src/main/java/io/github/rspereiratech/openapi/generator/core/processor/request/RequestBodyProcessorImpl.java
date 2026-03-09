@@ -11,6 +11,7 @@
 package io.github.rspereiratech.openapi.generator.core.processor.request;
 
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
+import io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeUtils;
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -26,6 +27,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -113,44 +115,12 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      * @return the implementation {@link Class}, or empty if not present or unresolvable
      */
     private Optional<Class<?>> extractImplementationClass(Annotation requestBodyAnn) {
-        try {
-            Annotation[] contentArr = (Annotation[]) requestBodyAnn.annotationType()
-                    .getDeclaredMethod("content").invoke(requestBodyAnn);
-            if (contentArr == null || contentArr.length == 0) return Optional.empty();
+        List<Annotation> contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(requestBodyAnn, "content");
+        if (contentArr.isEmpty()) return Optional.empty();
 
-            Object schemaResult = contentArr[0].annotationType()
-                    .getDeclaredMethod("schema").invoke(contentArr[0]);
-
-            Optional<Annotation> schemaAnn = firstAnnotation(schemaResult);
-            if (schemaAnn.isEmpty()) return Optional.empty();
-
-            Object impl = schemaAnn.get().annotationType()
-                    .getDeclaredMethod("implementation").invoke(schemaAnn.get());
-            return impl instanceof Class<?> c && c != Void.class
-                    ? Optional.of(c)
-                    : Optional.empty();
-        } catch (Exception e) {
-            log.warn("Could not read implementation class from @RequestBody content: {}", e.getMessage());
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Coerces a reflectively-obtained value to a single {@link Annotation}.
-     *
-     * <p>Handles both direct {@link Annotation} values and {@code Annotation[]} arrays,
-     * returning the first element in the latter case.</p>
-     *
-     * @param value the object returned by an annotation attribute accessor; may be {@code null}
-     * @return the first annotation found, or empty if {@code value} is neither an
-     *         {@link Annotation} nor a non-empty {@code Annotation[]}
-     */
-    private static Optional<Annotation> firstAnnotation(Object value) {
-        return switch (value) {
-            case Annotation a                          -> Optional.of(a);
-            case Annotation[] arr when arr.length > 0 -> Optional.of(arr[0]);
-            default                                    -> Optional.empty();
-        };
+        return AnnotationAttributeUtils.getAnnotationAttribute(contentArr.getFirst(), "schema")
+                .flatMap(schemaAnn -> AnnotationAttributeUtils.getClassAttribute(schemaAnn, "implementation"))
+                .filter(c -> c != Void.class);
     }
 
     /**
@@ -202,12 +172,6 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      * @return the value of the {@code required} attribute, or {@code true} as a safe default
      */
     private boolean getRequired(Annotation requestBodyAnnotation) {
-        try {
-            return (boolean) requestBodyAnnotation.annotationType()
-                    .getDeclaredMethod("required").invoke(requestBodyAnnotation);
-        } catch (Exception e) {
-            log.warn("Could not read 'required' from @RequestBody; defaulting to true: {}", e.getMessage());
-            return true;
-        }
+        return AnnotationAttributeUtils.getBooleanAttribute(requestBodyAnnotation, "required", true);
     }
 }

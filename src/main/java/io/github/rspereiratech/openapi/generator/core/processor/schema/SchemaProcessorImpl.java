@@ -20,6 +20,7 @@ import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
 
 import com.google.common.base.Preconditions;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
@@ -51,6 +52,7 @@ import java.util.Map;
  *
  * @author ruispereira
  */
+@Slf4j
 @SuppressWarnings("java:S1452") // Schema<?> is intentional: the schema value type is unknown at this abstraction level
 public class SchemaProcessorImpl implements SchemaProcessor {
 
@@ -98,6 +100,7 @@ public class SchemaProcessorImpl implements SchemaProcessor {
                 return h.resolve(unwrapped, this);
             }
         }
+        log.warn("No handler matched type '{}' — returning null schema", type.getTypeName());
         return null;
     }
 

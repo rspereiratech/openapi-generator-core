@@ -146,4 +146,79 @@ public final class AnnotationAttributeUtils {
         }
         return defaultValue;
     }
+
+    /**
+     * Reflectively reads a single {@link Annotation}-typed attribute from an annotation by name.
+     * <p>
+     * Returns {@link java.util.Optional#empty()} if the method does not exist, returns a
+     * non-{@link Annotation} type, or throws during invocation.
+     *
+     * @param annotation    the annotation instance to read from
+     * @param attributeName the attribute name to invoke (e.g. {@code "schema"}, {@code "array"})
+     * @return the attribute value wrapped in an {@link java.util.Optional}, or empty if unavailable
+     */
+    public static java.util.Optional<Annotation> getAnnotationAttribute(
+            Annotation annotation, String attributeName) {
+        try {
+            Method m = annotation.annotationType().getDeclaredMethod(attributeName);
+            return m.invoke(annotation) instanceof Annotation a
+                    ? java.util.Optional.of(a)
+                    : java.util.Optional.empty();
+        } catch (NoSuchMethodException ignored) {
+            // attribute does not exist on this annotation — expected
+        } catch (Exception e) {
+            log.debug(INVOKE_FAILED, attributeName, annotation.annotationType().getSimpleName(), e.getMessage());
+        }
+        return java.util.Optional.empty();
+    }
+
+    /**
+     * Reflectively reads an {@code Annotation[]}-typed attribute from an annotation by name.
+     * <p>
+     * Returns an empty list if the method does not exist, returns a non-{@code Annotation[]}
+     * type, or throws during invocation.
+     *
+     * @param annotation    the annotation instance to read from
+     * @param attributeName the attribute name to invoke (e.g. {@code "value"}, {@code "responses"}, {@code "content"})
+     * @return the attribute values as an unmodifiable list, or an empty list if unavailable
+     */
+    public static List<Annotation> getAnnotationArrayAttribute(
+            Annotation annotation, String attributeName) {
+        try {
+            Method m = annotation.annotationType().getDeclaredMethod(attributeName);
+            return m.invoke(annotation) instanceof Annotation[] arr
+                    ? List.of(arr)
+                    : List.of();
+        } catch (NoSuchMethodException ignored) {
+            // attribute does not exist on this annotation — expected
+        } catch (Exception e) {
+            log.debug(INVOKE_FAILED, attributeName, annotation.annotationType().getSimpleName(), e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * Reflectively reads a {@link Class}-typed attribute from an annotation by name.
+     * <p>
+     * Returns {@link java.util.Optional#empty()} if the method does not exist, returns a
+     * non-{@link Class} type, or throws during invocation.
+     *
+     * @param annotation    the annotation instance to read from
+     * @param attributeName the attribute name to invoke (e.g. {@code "implementation"})
+     * @return the attribute value wrapped in an {@link java.util.Optional}, or empty if unavailable
+     */
+    public static java.util.Optional<Class<?>> getClassAttribute(
+            Annotation annotation, String attributeName) {
+        try {
+            Method m = annotation.annotationType().getDeclaredMethod(attributeName);
+            return m.invoke(annotation) instanceof Class<?> c
+                    ? java.util.Optional.of(c)
+                    : java.util.Optional.empty();
+        } catch (NoSuchMethodException ignored) {
+            // attribute does not exist on this annotation — expected
+        } catch (Exception e) {
+            log.debug(INVOKE_FAILED, attributeName, annotation.annotationType().getSimpleName(), e.getMessage());
+        }
+        return java.util.Optional.empty();
+    }
 }
