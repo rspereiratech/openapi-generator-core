@@ -74,8 +74,8 @@ public final class BeanValidationConstraintApplier {
      * @param schemas the mutable map of schema name → schema from {@code ModelConverters}
      *                (accepts raw {@code Map<String, Schema>} via unchecked cast)
      */
-    @SuppressWarnings({"java:S1452", "unchecked", "rawtypes"})
-    public static void apply(Type type, Map schemas) {
+    @SuppressWarnings({"java:S1452", "unchecked"})
+    public static void apply(Type type, Map<String, ?> schemas) {
         if (schemas == null || schemas.isEmpty()) return;
 
         Set<Class<?>> reachable = collectReachableClasses(type, new HashSet<>());

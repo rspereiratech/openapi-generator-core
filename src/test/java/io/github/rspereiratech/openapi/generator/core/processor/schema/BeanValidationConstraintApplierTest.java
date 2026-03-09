@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-@SuppressWarnings({"rawtypes", "unchecked"})
 class BeanValidationConstraintApplierTest {
 
     // ==========================================================================
@@ -87,19 +86,20 @@ class BeanValidationConstraintApplierTest {
     // ==========================================================================
 
     /** Builds a schema map with one entry per field name, each with a fresh Schema. */
+    @SuppressWarnings("rawtypes")
     private static Map<String, Schema<?>> schemasFor(Class<?> clazz) {
         Map<String, Schema<?>> schemas = new LinkedHashMap<>();
         Schema<?> parent = new Schema<>();
-        Map<String, Schema<?>> props = new LinkedHashMap<>();
+        Map<String, Schema> props = new LinkedHashMap<>();
 
         for (var field : clazz.getDeclaredFields()) {
             com.fasterxml.jackson.annotation.JsonProperty jp =
                     field.getAnnotation(com.fasterxml.jackson.annotation.JsonProperty.class);
             String key = (jp != null && !jp.value().isEmpty()) ? jp.value() : field.getName();
-            props.put(key, new Schema<>());
+            props.put(key, new Schema());
         }
 
-        parent.setProperties((Map) new java.util.LinkedHashMap<>(props));
+        parent.setProperties(new java.util.LinkedHashMap<>(props));
         schemas.put(clazz.getSimpleName(), parent);
         return schemas;
     }
@@ -241,16 +241,14 @@ class BeanValidationConstraintApplierTest {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     void apply_emptySchemas_doesNotThrow() {
-        BeanValidationConstraintApplier.apply(MinMaxDto.class, new LinkedHashMap());
+        BeanValidationConstraintApplier.apply(MinMaxDto.class, new LinkedHashMap<String, Object>());
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     void apply_schemaWithNullProperties_doesNotThrow() {
         Schema<?> schema = new Schema<>(); // properties is null
-        Map schemas = new LinkedHashMap();
+        Map<String, Schema<?>> schemas = new LinkedHashMap<>();
         schemas.put("MinMaxDto", schema);
         BeanValidationConstraintApplier.apply(MinMaxDto.class, schemas);
     }
@@ -260,26 +258,27 @@ class BeanValidationConstraintApplierTest {
     // ==========================================================================
 
     @Test
+    @SuppressWarnings("rawtypes")
     void nestedType_constraintsAppliedToNestedSchema() {
         // Build schemas for both NestedDto and its inner MinMaxDto
         var schemas = new LinkedHashMap<String, Schema<?>>();
 
         Schema<?> nestedParent = new Schema<>();
-        Map<String, Schema<?>> nestedProps = new LinkedHashMap<>();
-        nestedProps.put("label",  new Schema<>());
-        nestedProps.put("id",     new Schema<>());
-        nestedProps.put("inner",  new Schema<>());
-        nestedParent.setProperties((Map) nestedProps);
+        Map<String, Schema> nestedProps = new LinkedHashMap<>();
+        nestedProps.put("label",  new Schema());
+        nestedProps.put("id",     new Schema());
+        nestedProps.put("inner",  new Schema());
+        nestedParent.setProperties(nestedProps);
         schemas.put("NestedDto", nestedParent);
 
         Schema<?> innerParent = new Schema<>();
-        Map<String, Schema<?>> innerProps = new LinkedHashMap<>();
-        innerProps.put("count", new Schema<>());
-        innerProps.put("limit", new Schema<>());
-        innerParent.setProperties((Map) innerProps);
+        Map<String, Schema> innerProps = new LinkedHashMap<>();
+        innerProps.put("count", new Schema());
+        innerProps.put("limit", new Schema());
+        innerParent.setProperties(innerProps);
         schemas.put("MinMaxDto", innerParent);
 
-        BeanValidationConstraintApplier.apply(NestedDto.class, (Map) schemas);
+        BeanValidationConstraintApplier.apply(NestedDto.class, schemas);
 
         assertAll(
                 () -> assertEquals(BigDecimal.valueOf(1),
