@@ -51,12 +51,12 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
     /**
      * Creates an instance with a custom {@link ValidationSchemaEnricher}.
      *
-     * @param constraintApplier the applier to use for Bean Validation propagation;
-     *                          must not be {@code null}
+     * @param enricher the enricher to use for Bean Validation propagation;
+     *                 must not be {@code null}
      */
-    public ModelConvertersTypeSchemaHandler(ValidationSchemaEnricher constraintApplier) {
-        Preconditions.checkNotNull(constraintApplier, "'constraintApplier' must not be null");
-        this.constraintApplier = constraintApplier;
+    public ModelConvertersTypeSchemaHandler(ValidationSchemaEnricher enricher) {
+        Preconditions.checkNotNull(enricher, "'enricher' must not be null");
+        this.constraintApplier = enricher;
     }
 
     @Override
