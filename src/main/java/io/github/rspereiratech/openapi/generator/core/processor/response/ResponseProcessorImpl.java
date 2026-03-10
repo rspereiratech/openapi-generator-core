@@ -55,8 +55,8 @@ import java.util.stream.Stream;
  */
 @Slf4j
 public class ResponseProcessorImpl implements ResponseProcessor {
-    /** Default media type applied when no {@code produces} attribute is declared on the handler method. */
-    private static final String DEFAULT_MEDIA_TYPE = "*/*";
+    private static final String MEDIA_TYPE_JSON     = "application/json";
+    private static final String MEDIA_TYPE_WILDCARD = "*/*";
     /** Shared {@link SchemaProcessor} used to derive response schemas from method return types. */
     private final SchemaProcessor    schemaProcessor;
     /** Strategy for resolving HTTP status codes and their descriptions. */
@@ -212,18 +212,52 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private Content buildContentFromAnnotation(Annotation contentAnn, Method method,
                                                 Map<TypeVariable<?>, Type> typeVarMap) {
         String mediaType = AnnotationAttributeUtils.getStringAttribute(contentAnn, "mediaType");
-        if (mediaType.isBlank()) mediaType = DEFAULT_MEDIA_TYPE;
+        if (mediaType.isBlank()) mediaType = defaultMediaType(method.getGenericReturnType());
 
         Schema<?> schema = AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
                 .map(this::schemaFromAnnotation)
                 .orElse(null);
         if (schema == null) schema = arraySchemaFromAnnotation(contentAnn);
+        if (schema == null && !hasSchemaHints(contentAnn)) return null; // empty @Content → no body
         if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
         if (schema == null) return null;
 
         Content content = new Content();
         content.addMediaType(mediaType, new MediaType().schema(schema));
         return content;
+    }
+
+    /**
+     * Returns {@code true} when the {@code @Content} annotation carries schema hints beyond
+     * a plain {@code implementation=Void.class} — specifically a non-empty {@code oneOf},
+     * {@code allOf}, or {@code anyOf} array, or an explicit {@code type} string.
+     *
+     * <p>Used to distinguish a truly empty {@code @Content} (signals "no body") from one
+     * that carries intent but whose schema cannot be resolved via {@code implementation}.</p>
+     */
+    private boolean hasSchemaHints(Annotation contentAnn) {
+        return AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
+                .map(schemaAnn -> {
+                    try {
+                        Class<?>[] oneOf = (Class<?>[]) schemaAnn.annotationType().getMethod("oneOf").invoke(schemaAnn);
+                        Class<?>[] allOf = (Class<?>[]) schemaAnn.annotationType().getMethod("allOf").invoke(schemaAnn);
+                        Class<?>[] anyOf = (Class<?>[]) schemaAnn.annotationType().getMethod("anyOf").invoke(schemaAnn);
+                        String     type  = (String)    schemaAnn.annotationType().getMethod("type").invoke(schemaAnn);
+                        return oneOf.length > 0 || allOf.length > 0 || anyOf.length > 0 || !type.isBlank();
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .orElse(false);
+    }
+
+    /**
+     * Returns the default media type based on the method return type, mirroring SpringDoc behaviour:
+     * {@code String} return types use {@value #MEDIA_TYPE_WILDCARD} (handled by
+     * {@code StringHttpMessageConverter}); all other types use {@value #MEDIA_TYPE_JSON}.
+     */
+    private String defaultMediaType(Type returnType) {
+        return returnType == String.class ? MEDIA_TYPE_WILDCARD : MEDIA_TYPE_JSON;
     }
 
     /**
@@ -315,12 +349,13 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * present on the method (e.g. {@code @GetMapping(produces = "...")} or
      * {@code @RequestMapping(produces = "...")}).
      *
-     * <p>Returns the first non-blank value found, or {@value #DEFAULT_MEDIA_TYPE} if none is declared.</p>
+     * <p>Falls back to {@link #defaultMediaType(Type)} when no {@code produces} is declared.</p>
      *
      * @param method the controller method to inspect; must not be {@code null}
      * @return the resolved media type; never {@code null}
      */
     private String resolveProduces(Method method) {
-        return AnnotationUtils.resolveStringArrayAttribute(method, "produces", DEFAULT_MEDIA_TYPE);
+        return AnnotationUtils.resolveStringArrayAttribute(method, "produces",
+                defaultMediaType(method.getGenericReturnType()));
     }
 }
