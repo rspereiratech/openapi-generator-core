@@ -29,6 +29,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -107,6 +108,13 @@ public class OpenApiGeneratorImpl implements OpenApiGenerator {
             log.warn("No controllers found in packages: {}", config.basePackages());
         }
 
+        // 2a – Sort controllers for deterministic output (when enabled)
+        if (config.sortOutput()) {
+            controllers = controllers.stream()
+                    .sorted(Comparator.comparing(Class::getCanonicalName))
+                    .toList();
+        }
+
         // 3 – Process each controller
         for (Class<?> controller : controllers) {
             try {
@@ -117,7 +125,7 @@ public class OpenApiGeneratorImpl implements OpenApiGenerator {
         }
 
         // 4 – Post-process
-        factory.createPostProcessors(sp).forEach(p -> p.process(openAPI));
+        factory.createPostProcessors(sp, config.sortOutput()).forEach(p -> p.process(openAPI));
 
         // 6 – Write output
         WriterFactory.create(config).write(openAPI, Path.of(config.outputFile()));

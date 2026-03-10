@@ -103,7 +103,9 @@ public interface ProcessorFactory {
      * controllers have been processed.
      *
      * @param schemaProcessor the shared schema processor, passed to processors that need it
+     * @param sortOutput      when {@code true}, a {@link io.github.rspereiratech.openapi.generator.core.postprocessor.SortPathsPostProcessor}
+     *                        is included to sort paths alphabetically for deterministic output
      * @return the post-processor chain; never {@code null}
      */
-    List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor);
+    List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor, boolean sortOutput);
 }

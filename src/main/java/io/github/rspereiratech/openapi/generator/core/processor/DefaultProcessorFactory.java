@@ -75,12 +75,13 @@ public class DefaultProcessorFactory implements ProcessorFactory {
     }
 
     @Override
-    public List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor) {
-        return List.of(
+    public List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor, boolean sortOutput) {
+        var processors = new java.util.ArrayList<PostProcessor>(List.of(
                 new SchemaRegistryMergePostProcessor(schemaProcessor),
-                new PruneUnreferencedSchemasPostProcessor(),
-                new SortPathsPostProcessor(),
-                new UniqueOperationIdPostProcessor()
-        );
+                new PruneUnreferencedSchemasPostProcessor()
+        ));
+        if (sortOutput) processors.add(new SortPathsPostProcessor());
+        processors.add(new UniqueOperationIdPostProcessor());
+        return List.copyOf(processors);
     }
 }

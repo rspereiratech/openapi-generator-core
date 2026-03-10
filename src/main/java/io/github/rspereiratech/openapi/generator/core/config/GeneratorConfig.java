@@ -95,7 +95,15 @@ public record GeneratorConfig(
          * For example, {@code https://api.example.com} becomes
          * {@code https://api.example.com/vcc-superx-api/}. May be null.
          */
-        String contextPath
+        String contextPath,
+
+        /*
+         * When {@code true}, controllers are sorted alphabetically by canonical
+         * class name before processing, and the resulting paths are sorted
+         * alphabetically in the final spec, guaranteeing a deterministic output
+         * regardless of filesystem or JVM ordering. Defaults to {@code false}.
+         */
+        boolean sortOutput
 ) {
     /**
      * Compact constructor — enforces immutability and validates required fields.
@@ -173,6 +181,7 @@ public record GeneratorConfig(
         private String  licenseName;
         private String  licenseUrl;
         private boolean prettyPrint    = true;
+        private boolean sortOutput     = false;
         private OutputFormat outputFormat = OutputFormat.YAML;
         private String  contextPath;
 
@@ -312,6 +321,17 @@ public record GeneratorConfig(
         public Builder prettyPrint(boolean prettyPrint)  { this.prettyPrint  = prettyPrint;  return this; }
 
         /**
+         * Controls whether controllers and paths are sorted alphabetically.
+         * When {@code true} (default), controllers are sorted by canonical class name
+         * before processing and paths are sorted alphabetically in the final spec,
+         * guaranteeing deterministic output across machines and builds.
+         *
+         * @param sortOutput {@code false} to preserve discovery order
+         * @return this builder
+         */
+        public Builder sortOutput(boolean sortOutput)    { this.sortOutput   = sortOutput;   return this; }
+
+        /**
          * Sets the optional application name that is appended to every server URL
          * as a path segment with a trailing slash.
          * For example, {@code contextPath("vcc-superx-api")} turns
@@ -348,7 +368,7 @@ public record GeneratorConfig(
                     servers, controllerAnnotations,
                     contactName, contactEmail, contactUrl,
                     licenseName, licenseUrl, prettyPrint, outputFormat,
-                    securitySchemes, contextPath);
+                    securitySchemes, contextPath, sortOutput);
         }
     }
 }
