@@ -13,7 +13,7 @@ SchemaRegistryMergePostProcessor
 PruneUnreferencedSchemasPostProcessor
             │
             ▼
-SortPathsPostProcessor
+SortSpecPostProcessor
   (no-op when sortOutput = false)
             │
             ▼
@@ -42,11 +42,14 @@ Scans all `$ref` values across the entire `OpenAPI` model (paths, request bodies
 
 ---
 
-### `SortPathsPostProcessor`
+### `SortSpecPostProcessor`
 
-Sorts the `paths` block of the generated spec alphabetically by path string when `sortOutput` is enabled.
+Sorts two things when `sortOutput` is enabled:
 
-Without explicit sorting, path order depends on the order in which controllers and methods are returned by reflection — which is not stable across JVMs, operating systems, or build environments. This processor ensures that every generation run produces the same path ordering, making spec diffs readable and CI comparisons reliable.
+- **Paths** — top-level path strings sorted alphabetically (e.g. `/agents` before `/queues`).
+- **Responses** — HTTP status-code keys within each operation sorted lexicographically (e.g. `"200"` before `"404"`).
+
+Without explicit sorting, both orderings depend on the sequence in which controllers and methods are returned by reflection — which is not stable across JVMs, operating systems, or build environments. This processor ensures every generation run produces the same output, making spec diffs readable and CI comparisons reliable.
 
 The processor is always present in the pipeline. When `sortOutput = false` (the default), `process()` returns immediately without modifying the model. This keeps the factory logic simple — no conditional inclusion is needed.
 

@@ -11,7 +11,7 @@
 package io.github.rspereiratech.openapi.generator.core.processor;
 
 import io.github.rspereiratech.openapi.generator.core.postprocessor.PostProcessor;
-import io.github.rspereiratech.openapi.generator.core.postprocessor.SortPathsPostProcessor;
+import io.github.rspereiratech.openapi.generator.core.postprocessor.SortSpecPostProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.controller.ControllerProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.controller.ControllerProcessorImpl;
 import io.github.rspereiratech.openapi.generator.core.processor.operation.OperationProcessor;
@@ -120,8 +120,8 @@ class DefaultProcessorFactoryTest {
     void createPostProcessors_containsSortPathsPostProcessor() {
         SchemaProcessor sp = factory.createSchemaProcessor();
         List<PostProcessor> processors = factory.createPostProcessors(sp, true);
-        boolean found = processors.stream().anyMatch(p -> p instanceof SortPathsPostProcessor);
-        org.junit.jupiter.api.Assertions.assertTrue(found, "SortPathsPostProcessor must always be in the chain");
+        boolean found = processors.stream().anyMatch(p -> p instanceof SortSpecPostProcessor);
+        org.junit.jupiter.api.Assertions.assertTrue(found, "SortSpecPostProcessor must always be in the chain");
     }
 
     @Test

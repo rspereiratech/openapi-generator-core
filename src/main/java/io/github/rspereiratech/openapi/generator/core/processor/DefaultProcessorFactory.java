@@ -13,7 +13,7 @@ package io.github.rspereiratech.openapi.generator.core.processor;
 import io.github.rspereiratech.openapi.generator.core.postprocessor.PostProcessor;
 import io.github.rspereiratech.openapi.generator.core.postprocessor.PruneUnreferencedSchemasPostProcessor;
 import io.github.rspereiratech.openapi.generator.core.postprocessor.SchemaRegistryMergePostProcessor;
-import io.github.rspereiratech.openapi.generator.core.postprocessor.SortPathsPostProcessor;
+import io.github.rspereiratech.openapi.generator.core.postprocessor.SortSpecPostProcessor;
 import io.github.rspereiratech.openapi.generator.core.postprocessor.UniqueOperationIdPostProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.controller.ControllerProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.controller.ControllerProcessorImpl;
@@ -82,7 +82,7 @@ public class DefaultProcessorFactory implements ProcessorFactory {
         return List.of(
                 new SchemaRegistryMergePostProcessor(schemaProcessor),
                 new PruneUnreferencedSchemasPostProcessor(),
-                new SortPathsPostProcessor(sortOutput),
+                new SortSpecPostProcessor(sortOutput),
                 new UniqueOperationIdPostProcessor()
         );
     }
