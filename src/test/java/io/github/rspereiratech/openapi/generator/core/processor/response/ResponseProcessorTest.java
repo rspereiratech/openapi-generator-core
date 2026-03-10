@@ -360,7 +360,7 @@ class ResponseProcessorTest {
         ApiResponses responses = processor.processResponses(
                 method("apiResponseWithArraySchema"), "GET");
         assertNotNull(responses.get("200").getContent(), "Content must not be null");
-        Schema<?> schema = responses.get("200").getContent().get("application/json").getSchema();
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
         assertTrue(schema instanceof ArraySchema,
                 "Schema must be an ArraySchema when @Content(array=@ArraySchema(...)) is declared");
     }
@@ -369,7 +369,7 @@ class ResponseProcessorTest {
     void apiResponseWithArraySchema_itemSchemaIsResolved() throws Exception {
         ApiResponses responses = processor.processResponses(
                 method("apiResponseWithArraySchema"), "GET");
-        Schema<?> schema = responses.get("200").getContent().get("application/json").getSchema();
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
         assertNotNull(((ArraySchema) schema).getItems(),
                 "ArraySchema items must be resolved from @ArraySchema.schema.implementation");
     }

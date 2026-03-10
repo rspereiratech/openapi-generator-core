@@ -55,8 +55,7 @@ import java.util.stream.Stream;
  */
 @Slf4j
 public class ResponseProcessorImpl implements ResponseProcessor {
-    private static final String MEDIA_TYPE_JSON     = "application/json";
-    private static final String MEDIA_TYPE_WILDCARD = "*/*";
+    private static final String DEFAULT_MEDIA_TYPE = "*/*";
     /** Shared {@link SchemaProcessor} used to derive response schemas from method return types. */
     private final SchemaProcessor    schemaProcessor;
     /** Strategy for resolving HTTP status codes and their descriptions. */
@@ -212,7 +211,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private Content buildContentFromAnnotation(Annotation contentAnn, Method method,
                                                 Map<TypeVariable<?>, Type> typeVarMap) {
         String mediaType = AnnotationAttributeUtils.getStringAttribute(contentAnn, "mediaType");
-        if (mediaType.isBlank()) mediaType = defaultMediaType(method.getGenericReturnType());
+        if (mediaType.isBlank()) mediaType = DEFAULT_MEDIA_TYPE;
 
         Schema<?> schema = AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
                 .map(this::schemaFromAnnotation)
@@ -249,15 +248,6 @@ public class ResponseProcessorImpl implements ResponseProcessor {
                     }
                 })
                 .orElse(false);
-    }
-
-    /**
-     * Returns the default media type based on the method return type, mirroring SpringDoc behaviour:
-     * {@code String} return types use {@value #MEDIA_TYPE_WILDCARD} (handled by
-     * {@code StringHttpMessageConverter}); all other types use {@value #MEDIA_TYPE_JSON}.
-     */
-    private String defaultMediaType(Type returnType) {
-        return returnType == String.class ? MEDIA_TYPE_WILDCARD : MEDIA_TYPE_JSON;
     }
 
     /**
@@ -349,13 +339,12 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * present on the method (e.g. {@code @GetMapping(produces = "...")} or
      * {@code @RequestMapping(produces = "...")}).
      *
-     * <p>Falls back to {@link #defaultMediaType(Type)} when no {@code produces} is declared.</p>
+     * <p>Returns the first non-blank value found, or {@value #DEFAULT_MEDIA_TYPE} if none is declared.</p>
      *
      * @param method the controller method to inspect; must not be {@code null}
      * @return the resolved media type; never {@code null}
      */
     private String resolveProduces(Method method) {
-        return AnnotationUtils.resolveStringArrayAttribute(method, "produces",
-                defaultMediaType(method.getGenericReturnType()));
+        return AnnotationUtils.resolveStringArrayAttribute(method, "produces", DEFAULT_MEDIA_TYPE);
     }
 }
