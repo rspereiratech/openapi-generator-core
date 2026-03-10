@@ -78,20 +78,45 @@ public interface ProcessorFactory {
                                                  Set<String> additionalIgnoredTypes);
 
     /**
-     * Creates the request-body processor.
+     * Creates the request-body processor using the default consumes media type
+     * ({@code application/json}).
      *
      * @param schemaProcessor the shared schema processor
      * @return a new {@link RequestBodyProcessor} instance
      */
-    RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor);
+    default RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor) {
+        return createRequestBodyProcessor(schemaProcessor, "application/json");
+    }
 
     /**
-     * Creates the response processor.
+     * Creates the request-body processor with a configurable default consumes media type.
+     *
+     * @param schemaProcessor          the shared schema processor
+     * @param defaultConsumesMediaType default media type when no {@code consumes} is declared
+     * @return a new {@link RequestBodyProcessor} instance
+     */
+    RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor,
+                                                     String defaultConsumesMediaType);
+
+    /**
+     * Creates the response processor using the default produces media type ({@code *}{@code /*}).
      *
      * @param schemaProcessor the shared schema processor
      * @return a new {@link ResponseProcessor} instance
      */
-    ResponseProcessor createResponseProcessor(SchemaProcessor schemaProcessor);
+    default ResponseProcessor createResponseProcessor(SchemaProcessor schemaProcessor) {
+        return createResponseProcessor(schemaProcessor, "*/*");
+    }
+
+    /**
+     * Creates the response processor with a configurable default produces media type.
+     *
+     * @param schemaProcessor         the shared schema processor
+     * @param defaultProducesMediaType default media type when no {@code produces} is declared
+     * @return a new {@link ResponseProcessor} instance
+     */
+    ResponseProcessor createResponseProcessor(SchemaProcessor schemaProcessor,
+                                               String defaultProducesMediaType);
 
     /**
      * Creates the operation processor from the three lower-level processors.

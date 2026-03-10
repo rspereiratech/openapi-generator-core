@@ -197,3 +197,31 @@ Fully-qualified class names of extra parameter types to ignore, applied on top o
 // or replace the entire list
 .additionalIgnoredParamTypes(List.of("com.example.security.TenantContext"))
 ```
+
+---
+
+### `defaultProducesMediaType`
+
+`String` — default: `*/*`
+
+The fallback media type used in response `content` blocks when no `produces` attribute is declared on the mapping annotation and no `@Content(mediaType = ...)` is specified.
+
+Mirrors `springdoc.default-produces-media-type`. Explicit `produces` values always take precedence.
+
+```java
+.defaultProducesMediaType("application/json")
+```
+
+---
+
+### `defaultConsumesMediaType`
+
+`String` — default: `application/json`
+
+The fallback media type used in request body `content` blocks when no `consumes` attribute is declared on the mapping annotation and no `@Content(mediaType = ...)` is specified.
+
+Mirrors `springdoc.default-consumes-media-type`. Explicit `consumes` values always take precedence.
+
+```java
+.defaultConsumesMediaType("application/xml")
+```

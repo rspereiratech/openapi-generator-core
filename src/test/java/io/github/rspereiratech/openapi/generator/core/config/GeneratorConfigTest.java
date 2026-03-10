@@ -583,4 +583,56 @@ class GeneratorConfigTest {
                 )
         );
     }
+
+    // ==========================================================================
+    // defaultProducesMediaType / defaultConsumesMediaType
+    // ==========================================================================
+
+    @Test
+    void defaultProducesMediaType_default_isWildcard() {
+        GeneratorConfig config = GeneratorConfig.builder().basePackage("com.example").build();
+        Assertions.assertEquals("*/*", config.defaultProducesMediaType());
+    }
+
+    @Test
+    void defaultConsumesMediaType_default_isApplicationJson() {
+        GeneratorConfig config = GeneratorConfig.builder().basePackage("com.example").build();
+        Assertions.assertEquals("application/json", config.defaultConsumesMediaType());
+    }
+
+    @Test
+    void defaultProducesMediaType_customValue_isPreserved() {
+        GeneratorConfig config = GeneratorConfig.builder()
+                .basePackage("com.example")
+                .defaultProducesMediaType("application/json")
+                .build();
+        Assertions.assertEquals("application/json", config.defaultProducesMediaType());
+    }
+
+    @Test
+    void defaultConsumesMediaType_customValue_isPreserved() {
+        GeneratorConfig config = GeneratorConfig.builder()
+                .basePackage("com.example")
+                .defaultConsumesMediaType("*/*")
+                .build();
+        Assertions.assertEquals("*/*", config.defaultConsumesMediaType());
+    }
+
+    @Test
+    void defaultProducesMediaType_null_fallsBackToWildcard() {
+        GeneratorConfig config = GeneratorConfig.builder()
+                .basePackage("com.example")
+                .defaultProducesMediaType(null)
+                .build();
+        Assertions.assertEquals("*/*", config.defaultProducesMediaType());
+    }
+
+    @Test
+    void defaultConsumesMediaType_blank_fallsBackToApplicationJson() {
+        GeneratorConfig config = GeneratorConfig.builder()
+                .basePackage("com.example")
+                .defaultConsumesMediaType("   ")
+                .build();
+        Assertions.assertEquals("application/json", config.defaultConsumesMediaType());
+    }
 }

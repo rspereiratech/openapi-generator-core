@@ -43,20 +43,38 @@ import java.util.stream.IntStream;
 @Slf4j
 public class RequestBodyProcessorImpl implements RequestBodyProcessor {
 
-    /** Default media type applied when no {@code consumes} attribute is declared on the handler method. */
-    private static final String DEFAULT_MEDIA_TYPE = "application/json";
+    /** Default media type for request bodies — mirrors {@code springdoc.default-consumes-media-type}. */
+    private static final String FALLBACK_CONSUMES_MEDIA_TYPE = "application/json";
 
     /** Shared {@link SchemaProcessor} used to derive request-body schemas from parameter types. */
     private final SchemaProcessor schemaProcessor;
+    /** Default media type used when no {@code consumes} attribute is declared on the handler method. */
+    private final String          defaultConsumesMediaType;
 
     /**
-     * Creates a new {@code RequestBodyProcessorImpl}.
+     * Creates a new {@code RequestBodyProcessorImpl} using {@value #FALLBACK_CONSUMES_MEDIA_TYPE}
+     * as the default consumes media type.
      *
      * @param schemaProcessor the shared schema processor; must not be {@code null}
      * @throws NullPointerException if {@code schemaProcessor} is {@code null}
      */
     public RequestBodyProcessorImpl(SchemaProcessor schemaProcessor) {
-        this.schemaProcessor = Preconditions.checkNotNull(schemaProcessor, "'schemaProcessor' must not be null");
+        this(schemaProcessor, FALLBACK_CONSUMES_MEDIA_TYPE);
+    }
+
+    /**
+     * Creates a new {@code RequestBodyProcessorImpl} with a configurable default consumes media type.
+     *
+     * @param schemaProcessor        the shared schema processor; must not be {@code null}
+     * @param defaultConsumesMediaType the default media type when no {@code consumes} is declared;
+     *                               {@code null} or blank falls back to
+     *                               {@value #FALLBACK_CONSUMES_MEDIA_TYPE}
+     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
+     */
+    public RequestBodyProcessorImpl(SchemaProcessor schemaProcessor, String defaultConsumesMediaType) {
+        this.schemaProcessor         = Preconditions.checkNotNull(schemaProcessor, "'schemaProcessor' must not be null");
+        this.defaultConsumesMediaType = (defaultConsumesMediaType == null || defaultConsumesMediaType.isBlank())
+                ? FALLBACK_CONSUMES_MEDIA_TYPE : defaultConsumesMediaType;
     }
 
     @Override
@@ -153,13 +171,14 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      * annotation present on the method (e.g. {@code @PostMapping(consumes = "...")} or
      * {@code @RequestMapping(consumes = "...")}).
      *
-     * <p>Returns the first non-blank value found, or {@value #DEFAULT_MEDIA_TYPE} if none is declared.</p>
+     * <p>Returns the first non-blank value found, or {@link #defaultConsumesMediaType} if none
+     * is declared.</p>
      *
      * @param method the controller method to inspect; must not be {@code null}
      * @return the resolved media type; never {@code null}
      */
     private String resolveConsumes(Method method) {
-        return AnnotationUtils.resolveStringArrayAttribute(method, "consumes", DEFAULT_MEDIA_TYPE);
+        return AnnotationUtils.resolveStringArrayAttribute(method, "consumes", defaultConsumesMediaType);
     }
 
     /**

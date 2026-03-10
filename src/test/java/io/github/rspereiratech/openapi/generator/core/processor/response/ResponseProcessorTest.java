@@ -387,6 +387,42 @@ class ResponseProcessorTest {
     @Test
     void constructor_nullStatusResolver_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new ResponseProcessorImpl(schemaProcessor, null));
+                () -> new ResponseProcessorImpl(schemaProcessor, "*/*", null));
+    }
+
+    // ==========================================================================
+    // Configurable default produces media type
+    // ==========================================================================
+
+    @Test
+    void customDefaultProducesMediaType_usedWhenNoProducesDeclared() throws Exception {
+        ResponseProcessorImpl customProc = new ResponseProcessorImpl(schemaProcessor, "application/json");
+        ApiResponses responses = customProc.processResponses(method("getReturnsString"), "GET");
+        assertNotNull(responses.get("200").getContent().get("application/json"),
+                "Custom defaultProducesMediaType must be used when no produces attribute is declared");
+    }
+
+    @Test
+    void customDefaultProducesMediaType_explicitProducesOverridesDefault() throws Exception {
+        ResponseProcessorImpl customProc = new ResponseProcessorImpl(schemaProcessor, "application/json");
+        ApiResponses responses = customProc.processResponses(method("producesXml"), "GET");
+        assertNotNull(responses.get("200").getContent().get("application/xml"),
+                "Explicit produces attribute must override the configured default");
+    }
+
+    @Test
+    void nullDefaultProducesMediaType_fallsBackToWildcard() throws Exception {
+        ResponseProcessorImpl customProc = new ResponseProcessorImpl(schemaProcessor, null);
+        ApiResponses responses = customProc.processResponses(method("getReturnsString"), "GET");
+        assertNotNull(responses.get("200").getContent().get("*/*"),
+                "null defaultProducesMediaType must fall back to '*/*'");
+    }
+
+    @Test
+    void blankDefaultProducesMediaType_fallsBackToWildcard() throws Exception {
+        ResponseProcessorImpl customProc = new ResponseProcessorImpl(schemaProcessor, "  ");
+        ApiResponses responses = customProc.processResponses(method("getReturnsString"), "GET");
+        assertNotNull(responses.get("200").getContent().get("*/*"),
+                "Blank defaultProducesMediaType must fall back to '*/*'");
     }
 }

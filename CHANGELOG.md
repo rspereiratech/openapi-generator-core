@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `GeneratorConfig`: `additionalIgnoredParamTypes` list — extra FQNs ignored on top of the defaults
 - `ProcessorFactory`: new `createParameterProcessor(SchemaProcessor, boolean, Set<String>)` overload; existing single-argument signature preserved as a `default` method
 - `ControllerProcessorImpl`: generates `in: header` parameters from the `headers` attribute of Spring MVC mapping annotations (e.g. `@PostMapping(headers = "x-dashboard-name=pcs")`); `key=value` expressions produce an enum-constrained string schema; when two methods map to the same path and HTTP method, the header-conditioned variant takes precedence
+- `GeneratorConfig`: `defaultProducesMediaType` field (default `*/*`) — configures the fallback media type for response bodies when no `produces` attribute is declared; mirrors `springdoc.default-produces-media-type`
+- `GeneratorConfig`: `defaultConsumesMediaType` field (default `application/json`) — configures the fallback media type for request bodies when no `consumes` attribute is declared; mirrors `springdoc.default-consumes-media-type`
+- `ResponseProcessorImpl`: new constructors `ResponseProcessorImpl(SchemaProcessor, String defaultProducesMediaType)` and `ResponseProcessorImpl(SchemaProcessor, String, HttpStatusResolver)` — the default media type is now an instance property rather than a static constant
+- `RequestBodyProcessorImpl`: new constructor `RequestBodyProcessorImpl(SchemaProcessor, String defaultConsumesMediaType)` — the default media type is now an instance property rather than a static constant
+- `ProcessorFactory`: new abstract overloads `createResponseProcessor(SchemaProcessor, String)` and `createRequestBodyProcessor(SchemaProcessor, String)`; existing single-argument signatures preserved as `default` methods
 
 ### Fixed
 

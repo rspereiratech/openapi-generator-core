@@ -58,13 +58,15 @@ public class DefaultProcessorFactory implements ProcessorFactory {
     }
 
     @Override
-    public RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor) {
-        return new RequestBodyProcessorImpl(schemaProcessor);
+    public RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor,
+                                                            String defaultConsumesMediaType) {
+        return new RequestBodyProcessorImpl(schemaProcessor, defaultConsumesMediaType);
     }
 
     @Override
-    public ResponseProcessor createResponseProcessor(SchemaProcessor schemaProcessor) {
-        return new ResponseProcessorImpl(schemaProcessor);
+    public ResponseProcessor createResponseProcessor(SchemaProcessor schemaProcessor,
+                                                      String defaultProducesMediaType) {
+        return new ResponseProcessorImpl(schemaProcessor, defaultProducesMediaType);
     }
 
     @Override

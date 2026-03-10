@@ -180,4 +180,40 @@ class RequestBodyProcessorTest {
         assertThrows(NullPointerException.class,
                 () -> new RequestBodyProcessorImpl(null));
     }
+
+    // ==========================================================================
+    // Configurable default consumes media type
+    // ==========================================================================
+
+    @Test
+    void customDefaultConsumesMediaType_usedWhenNoConsumesDeclared() throws Exception {
+        RequestBodyProcessorImpl customProc = new RequestBodyProcessorImpl(schemaProcessor, "application/xml");
+        RequestBody body = customProc.processRequestBody(method("withBody", String.class)).orElseThrow();
+        assertNotNull(body.getContent().get("application/xml"),
+                "Custom defaultConsumesMediaType must be used when no consumes attribute is declared");
+    }
+
+    @Test
+    void customDefaultConsumesMediaType_explicitConsumesOverridesDefault() throws Exception {
+        RequestBodyProcessorImpl customProc = new RequestBodyProcessorImpl(schemaProcessor, "text/plain");
+        RequestBody body = customProc.processRequestBody(method("withXmlBody", String.class)).orElseThrow();
+        assertNotNull(body.getContent().get("application/xml"),
+                "Explicit consumes attribute must override the configured default");
+    }
+
+    @Test
+    void nullDefaultConsumesMediaType_fallsBackToApplicationJson() throws Exception {
+        RequestBodyProcessorImpl customProc = new RequestBodyProcessorImpl(schemaProcessor, null);
+        RequestBody body = customProc.processRequestBody(method("withBody", String.class)).orElseThrow();
+        assertNotNull(body.getContent().get("application/json"),
+                "null defaultConsumesMediaType must fall back to 'application/json'");
+    }
+
+    @Test
+    void blankDefaultConsumesMediaType_fallsBackToApplicationJson() throws Exception {
+        RequestBodyProcessorImpl customProc = new RequestBodyProcessorImpl(schemaProcessor, "  ");
+        RequestBody body = customProc.processRequestBody(method("withBody", String.class)).orElseThrow();
+        assertNotNull(body.getContent().get("application/json"),
+                "Blank defaultConsumesMediaType must fall back to 'application/json'");
+    }
 }

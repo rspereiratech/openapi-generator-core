@@ -55,32 +55,55 @@ import java.util.stream.Stream;
  */
 @Slf4j
 public class ResponseProcessorImpl implements ResponseProcessor {
-    private static final String DEFAULT_MEDIA_TYPE = "*/*";
+    /** Default media type for response bodies — mirrors {@code springdoc.default-produces-media-type}. */
+    private static final String FALLBACK_PRODUCES_MEDIA_TYPE = "*/*";
+
     /** Shared {@link SchemaProcessor} used to derive response schemas from method return types. */
     private final SchemaProcessor    schemaProcessor;
     /** Strategy for resolving HTTP status codes and their descriptions. */
     private final HttpStatusResolver statusResolver;
+    /** Default media type used when no {@code produces} or {@code @Content(mediaType)} is declared. */
+    private final String             defaultProducesMediaType;
 
     /**
-     * Creates a new {@code ResponseProcessorImpl} using the default {@link DefaultHttpStatusResolver}.
+     * Creates a new {@code ResponseProcessorImpl} using {@value #FALLBACK_PRODUCES_MEDIA_TYPE}
+     * as the default produces media type and the default {@link DefaultHttpStatusResolver}.
      *
      * @param schemaProcessor the shared schema processor; must not be {@code null}
      * @throws NullPointerException if {@code schemaProcessor} is {@code null}
      */
     public ResponseProcessorImpl(SchemaProcessor schemaProcessor) {
-        this(schemaProcessor, new DefaultHttpStatusResolver());
+        this(schemaProcessor, FALLBACK_PRODUCES_MEDIA_TYPE, new DefaultHttpStatusResolver());
     }
 
     /**
-     * Creates an instance with a custom {@link HttpStatusResolver}.
+     * Creates an instance with a configurable default produces media type.
      *
-     * @param schemaProcessor the shared schema processor; must not be null
-     * @param statusResolver  strategy for status-code resolution and description; must not be null
-     * @throws NullPointerException if either argument is null
+     * @param schemaProcessor        the shared schema processor; must not be {@code null}
+     * @param defaultProducesMediaType the default media type when no {@code produces} is declared;
+     *                               {@code null} or blank falls back to {@value #FALLBACK_PRODUCES_MEDIA_TYPE}
+     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
      */
-    public ResponseProcessorImpl(SchemaProcessor schemaProcessor, HttpStatusResolver statusResolver) {
-        this.schemaProcessor = Preconditions.checkNotNull(schemaProcessor, "'schemaProcessor' must not be null");
-        this.statusResolver  = Preconditions.checkNotNull(statusResolver,  "'statusResolver' must not be null");
+    public ResponseProcessorImpl(SchemaProcessor schemaProcessor, String defaultProducesMediaType) {
+        this(schemaProcessor, defaultProducesMediaType, new DefaultHttpStatusResolver());
+    }
+
+    /**
+     * Creates an instance with a custom {@link HttpStatusResolver} and configurable default
+     * produces media type.
+     *
+     * @param schemaProcessor        the shared schema processor; must not be {@code null}
+     * @param defaultProducesMediaType the default media type when no {@code produces} is declared;
+     *                               {@code null} or blank falls back to {@value #FALLBACK_PRODUCES_MEDIA_TYPE}
+     * @param statusResolver         strategy for status-code resolution and description; must not be {@code null}
+     * @throws NullPointerException if {@code schemaProcessor} or {@code statusResolver} is {@code null}
+     */
+    public ResponseProcessorImpl(SchemaProcessor schemaProcessor, String defaultProducesMediaType,
+                                  HttpStatusResolver statusResolver) {
+        this.schemaProcessor         = Preconditions.checkNotNull(schemaProcessor, "'schemaProcessor' must not be null");
+        this.statusResolver          = Preconditions.checkNotNull(statusResolver,  "'statusResolver' must not be null");
+        this.defaultProducesMediaType = (defaultProducesMediaType == null || defaultProducesMediaType.isBlank())
+                ? FALLBACK_PRODUCES_MEDIA_TYPE : defaultProducesMediaType;
     }
 
     @Override
@@ -211,7 +234,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private Content buildContentFromAnnotation(Annotation contentAnn, Method method,
                                                 Map<TypeVariable<?>, Type> typeVarMap) {
         String mediaType = AnnotationAttributeUtils.getStringAttribute(contentAnn, "mediaType");
-        if (mediaType.isBlank()) mediaType = DEFAULT_MEDIA_TYPE;
+        if (mediaType.isBlank()) mediaType = defaultProducesMediaType;
 
         Schema<?> schema = AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
                 .map(this::schemaFromAnnotation)
@@ -339,12 +362,13 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * present on the method (e.g. {@code @GetMapping(produces = "...")} or
      * {@code @RequestMapping(produces = "...")}).
      *
-     * <p>Returns the first non-blank value found, or {@value #DEFAULT_MEDIA_TYPE} if none is declared.</p>
+     * <p>Returns the first non-blank value found, or {@link #defaultProducesMediaType} if none
+     * is declared.</p>
      *
      * @param method the controller method to inspect; must not be {@code null}
      * @return the resolved media type; never {@code null}
      */
     private String resolveProduces(Method method) {
-        return AnnotationUtils.resolveStringArrayAttribute(method, "produces", DEFAULT_MEDIA_TYPE);
+        return AnnotationUtils.resolveStringArrayAttribute(method, "produces", defaultProducesMediaType);
     }
 }

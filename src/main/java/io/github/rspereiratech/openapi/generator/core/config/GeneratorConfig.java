@@ -117,7 +117,15 @@ public record GeneratorConfig(
          * Additional fully-qualified class names of parameter types to ignore,
          * on top of the built-in defaults. Never null, may be empty.
          */
-        List<String> additionalIgnoredParamTypes
+        List<String> additionalIgnoredParamTypes,
+
+        // Default media type for response bodies when no produces attribute is declared.
+        // Mirrors springdoc.default-produces-media-type. Defaults to "*&#47;*".
+        String defaultProducesMediaType,
+
+        // Default media type for request bodies when no consumes attribute is declared.
+        // Mirrors springdoc.default-consumes-media-type. Defaults to "application/json".
+        String defaultConsumesMediaType
 ) {
     /**
      * Compact constructor — enforces immutability and validates required fields.
@@ -156,6 +164,11 @@ public record GeneratorConfig(
         controllerAnnotations = List.copyOf(resolvedAnnotations);
 
         additionalIgnoredParamTypes = List.copyOf(additionalIgnoredParamTypes != null ? additionalIgnoredParamTypes : List.of());
+
+        if (defaultProducesMediaType == null || defaultProducesMediaType.isBlank())
+            defaultProducesMediaType = "*/*";
+        if (defaultConsumesMediaType == null || defaultConsumesMediaType.isBlank())
+            defaultConsumesMediaType = "application/json";
     }
 
     /**
@@ -200,8 +213,10 @@ public record GeneratorConfig(
         private boolean prettyPrint              = true;
         private boolean sortOutput               = false;
         private boolean ignoreDefaultParamTypes  = true;
-        private OutputFormat outputFormat = OutputFormat.YAML;
+        private OutputFormat outputFormat        = OutputFormat.YAML;
         private String  contextPath;
+        private String  defaultProducesMediaType = "*/*";
+        private String  defaultConsumesMediaType = "application/json";
 
         /**
          * Adds a single base package to scan for Spring MVC controllers.
@@ -374,6 +389,32 @@ public record GeneratorConfig(
         }
 
         /**
+         * Sets the default media type for response bodies when no {@code produces} is declared.
+         * Mirrors {@code springdoc.default-produces-media-type}. Defaults to {@code *}{@code /*}.
+         *
+         * @param mediaType the media type string; {@code null} or blank resets to {@code *}{@code /*}
+         * @return this builder
+         */
+        public Builder defaultProducesMediaType(String mediaType) {
+            this.defaultProducesMediaType = mediaType;
+            return this;
+        }
+
+        /**
+         * Sets the default media type for request bodies when no {@code consumes} is declared.
+         * Mirrors {@code springdoc.default-consumes-media-type}. Defaults to
+         * {@code "application/json"}.
+         *
+         * @param mediaType the media type string; {@code null} or blank resets to
+         *                  {@code "application/json"}
+         * @return this builder
+         */
+        public Builder defaultConsumesMediaType(String mediaType) {
+            this.defaultConsumesMediaType = mediaType;
+            return this;
+        }
+
+        /**
          * Adds a single fully-qualified class name to the additional ignored parameter types list.
          *
          * @param fqn the fully-qualified class name to ignore; must not be {@code null} or blank
@@ -426,7 +467,8 @@ public record GeneratorConfig(
                     contactName, contactEmail, contactUrl,
                     licenseName, licenseUrl, prettyPrint, outputFormat,
                     securitySchemes, contextPath, sortOutput,
-                    ignoreDefaultParamTypes, additionalIgnoredParamTypes);
+                    ignoreDefaultParamTypes, additionalIgnoredParamTypes,
+                    defaultProducesMediaType, defaultConsumesMediaType);
         }
     }
 }
