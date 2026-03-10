@@ -89,6 +89,7 @@ public class DefaultClasspathScanner implements ClasspathScanner {
             }
         }
 
+        controllers.sort(java.util.Comparator.comparing(Class::getCanonicalName));
         log.info("Classpath scan complete – {} controller(s) found in packages {}",
                 controllers.size(), basePackages);
         return controllers;
