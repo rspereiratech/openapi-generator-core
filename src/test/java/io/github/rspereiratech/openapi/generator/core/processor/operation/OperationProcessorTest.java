@@ -65,7 +65,7 @@ class OperationProcessorTest {
                 .addApiResponse("200", new ApiResponse().description("OK"))
                 .addApiResponse("default", new ApiResponse().description("Unexpected error"));
 
-        lenient().when(parameterProcessor.processParameters(any(), any())).thenReturn(List.of());
+        lenient().when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of());
         lenient().when(requestBodyProcessor.processRequestBody(any(), any())).thenReturn(Optional.empty());
         lenient().when(responseProcessor.processResponses(any(), anyString(), any())).thenReturn(defaultResponses);
 
@@ -187,7 +187,7 @@ class OperationProcessorTest {
     @Test
     void buildOperation_methodWithPathVariable_parameterPresent() throws Exception {
         Parameter pathParam = new Parameter().name("id").in("path");
-        when(parameterProcessor.processParameters(any(), any())).thenReturn(List.of(pathParam));
+        when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of(pathParam));
 
         io.swagger.v3.oas.models.Operation op =
                 processor.buildOperation(method("getUserById", Long.class), "GET", List.of());
@@ -195,13 +195,13 @@ class OperationProcessorTest {
         assertNotNull(op.getParameters());
         assertEquals(1, op.getParameters().size());
         assertEquals("path", op.getParameters().get(0).getIn());
-        verify(parameterProcessor).processParameters(eq(method("getUserById", Long.class)), any());
+        verify(parameterProcessor).processParameters(eq(method("getUserById", Long.class)), any(), any());
     }
 
     @Test
     void buildOperation_methodWithRequestParam_parameterPresent() throws Exception {
         Parameter queryParam = new Parameter().name("q").in("query");
-        when(parameterProcessor.processParameters(any(), any())).thenReturn(List.of(queryParam));
+        when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of(queryParam));
 
         io.swagger.v3.oas.models.Operation op =
                 processor.buildOperation(method("filterItems", String.class), "GET", List.of());
@@ -209,7 +209,7 @@ class OperationProcessorTest {
         assertNotNull(op.getParameters());
         List<Parameter> params = op.getParameters();
         assertTrue(params.stream().anyMatch(p -> "query".equals(p.getIn())));
-        verify(parameterProcessor).processParameters(eq(method("filterItems", String.class)), any());
+        verify(parameterProcessor).processParameters(eq(method("filterItems", String.class)), any(), any());
     }
 
     @Test

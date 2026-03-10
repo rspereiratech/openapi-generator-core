@@ -72,11 +72,13 @@ public class OperationProcessorImpl implements OperationProcessor {
     }
 
     @Override
-    public Operation buildOperation(Method method, String httpMethod, Collection<String> tags, Map<TypeVariable<?>, Type> typeVarMap) {
-        Preconditions.checkNotNull(method,     "method must not be null");
-        Preconditions.checkNotNull(httpMethod, "httpMethod must not be null");
-        Preconditions.checkNotNull(tags,       "tags must not be null");
-        Preconditions.checkNotNull(typeVarMap, "typeVarMap must not be null");
+    public Operation buildOperation(Method method, String httpMethod, Collection<String> tags,
+                                    Map<TypeVariable<?>, Type> typeVarMap, List<String> mappingHeaders) {
+        Preconditions.checkNotNull(method,         "method must not be null");
+        Preconditions.checkNotNull(httpMethod,     "httpMethod must not be null");
+        Preconditions.checkNotNull(tags,           "tags must not be null");
+        Preconditions.checkNotNull(typeVarMap,     "typeVarMap must not be null");
+        Preconditions.checkNotNull(mappingHeaders, "mappingHeaders must not be null");
 
         log.debug("  Processing method: {} {}", httpMethod, method.getName());
 
@@ -86,7 +88,7 @@ public class OperationProcessorImpl implements OperationProcessor {
         applyDefaults(operation, method);
 
         List<io.swagger.v3.oas.models.parameters.Parameter> parameters =
-                parameterProcessor.processParameters(method, typeVarMap);
+                parameterProcessor.processParameters(method, typeVarMap, mappingHeaders);
         if (!parameters.isEmpty()) {
             operation.setParameters(parameters);
         }

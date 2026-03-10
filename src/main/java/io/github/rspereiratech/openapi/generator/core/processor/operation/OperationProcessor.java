@@ -17,6 +17,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,12 +60,33 @@ public interface OperationProcessor {
      * Variant that also accepts a type-variable map for resolving generic type parameters
      * (e.g. {@code T} in {@code ResponseEntity<T>}) to their concrete types before schema generation.
      *
+     * <p>Delegates to {@link #buildOperation(Method, String, Collection, Map, List)} with empty mapping headers.</p>
+     *
      * @param method     the controller method to process; must not be {@code null}
      * @param httpMethod the uppercase HTTP verb (e.g. {@code "POST"})
      * @param tags       tags inherited from the owning controller; may be empty
      * @param typeVarMap mapping of type variables to concrete types; may be empty
      * @return the populated {@link Operation} representing the controller method
      */
+    default Operation buildOperation(Method method, String httpMethod, Collection<String> tags,
+                                     Map<TypeVariable<?>, Type> typeVarMap) {
+        return buildOperation(method, httpMethod, tags, typeVarMap, List.of());
+    }
+
+    /**
+     * Variant that also accepts header expressions from the Spring MVC mapping annotation's
+     * {@code headers} attribute (e.g. {@code @PostMapping(headers = "x-dashboard-name=pcs")}).
+     *
+     * <p>Header expressions are forwarded to the parameter processor to generate
+     * additional {@code in: header} parameters in the OpenAPI operation.</p>
+     *
+     * @param method         the controller method to process; must not be {@code null}
+     * @param httpMethod     the uppercase HTTP verb (e.g. {@code "POST"})
+     * @param tags           tags inherited from the owning controller; may be empty
+     * @param typeVarMap     mapping of type variables to concrete types; may be empty
+     * @param mappingHeaders header expressions from the mapping annotation; may be empty
+     * @return the populated {@link Operation} representing the controller method
+     */
     Operation buildOperation(Method method, String httpMethod, Collection<String> tags,
-                             Map<TypeVariable<?>, Type> typeVarMap);
+                             Map<TypeVariable<?>, Type> typeVarMap, List<String> mappingHeaders);
 }

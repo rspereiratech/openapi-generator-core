@@ -74,5 +74,30 @@ public interface ParameterProcessor {
      * @return a list of OpenAPI {@link Parameter} objects representing the method parameters;
      *         may be empty but never {@code null}
      */
-    List<Parameter> processParameters(Method method, Map<TypeVariable<?>, Type> typeVarMap);
+    default List<Parameter> processParameters(Method method, Map<TypeVariable<?>, Type> typeVarMap) {
+        return processParameters(method, typeVarMap, List.of());
+    }
+
+    /**
+     * Extracts all non-body parameters from the given controller method, resolving any
+     * {@link TypeVariable}s in parameter types, and also generates header parameters derived
+     * from the {@code headers} attribute of the Spring MVC mapping annotation
+     * (e.g. {@code @PostMapping(headers = "x-dashboard-name=pcs")}).
+     *
+     * <p>Each entry in {@code mappingHeaders} follows Spring MVC's header expression syntax:
+     * <ul>
+     *   <li>{@code "X-Header=value"} — header must equal value; generates an enum-constrained schema</li>
+     *   <li>{@code "X-Header"} — header must be present; generates an unconstrained string schema</li>
+     *   <li>{@code "!X-Header"} — header must NOT be present; skipped (not representable in OpenAPI)</li>
+     * </ul>
+     * </p>
+     *
+     * @param method         the controller method to inspect; must not be {@code null}
+     * @param typeVarMap     mapping of type variables to concrete types; must not be {@code null}
+     * @param mappingHeaders header expressions from the mapping annotation's {@code headers} attribute;
+     *                       may be empty but never {@code null}
+     * @return a list of OpenAPI {@link Parameter} objects; may be empty but never {@code null}
+     */
+    List<Parameter> processParameters(Method method, Map<TypeVariable<?>, Type> typeVarMap,
+                                      List<String> mappingHeaders);
 }

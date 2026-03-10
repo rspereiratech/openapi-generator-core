@@ -15,6 +15,7 @@ import io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeU
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
 import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.PathParameter;
 import io.swagger.v3.oas.models.parameters.QueryParameter;
@@ -85,13 +86,15 @@ public class ParameterProcessorImpl implements ParameterProcessor {
 
     @Override
     public List<Parameter> processParameters(Method method,
-                                             Map<TypeVariable<?>, Type> typeVarMap) {
-        Preconditions.checkNotNull(method,     "method must not be null");
-        Preconditions.checkNotNull(typeVarMap, "typeVarMap must not be null");
+                                             Map<TypeVariable<?>, Type> typeVarMap,
+                                             List<String> mappingHeaders) {
+        Preconditions.checkNotNull(method,         "method must not be null");
+        Preconditions.checkNotNull(typeVarMap,     "typeVarMap must not be null");
+        Preconditions.checkNotNull(mappingHeaders, "mappingHeaders must not be null");
 
         java.lang.reflect.Parameter[] methodParams = method.getParameters();
 
-        return IntStream.range(0, methodParams.length)
+        Stream<Parameter> methodParamStream = IntStream.range(0, methodParams.length)
                 .mapToObj(i -> {
                     java.lang.reflect.Parameter param = methodParams[i];
                     Annotation[] annotations = AnnotationUtils.getAllParameterAnnotations(method, i);
@@ -99,11 +102,62 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                             ? buildPageableParameter(param, i, annotations)
                             : processParameter(param, annotations, typeVarMap);
                 })
-                .flatMap(Optional::stream)
-                .toList();
+                .flatMap(Optional::stream);
+
+        Stream<Parameter> mappingHeaderStream = mappingHeaders.stream()
+                .filter(h -> !h.isBlank() && !h.startsWith("!"))
+                .map(ParameterProcessorImpl::buildMappingHeaderParameter);
+
+        return Stream.concat(methodParamStream, mappingHeaderStream).toList();
     }
 
     // ------------------------------------------------------------------
+
+    /**
+     * Builds an OpenAPI header {@link Parameter} from a Spring MVC header expression.
+     *
+     * <p>Supports two expression formats:
+     * <ul>
+     *   <li>{@code "X-Header=value"} — the header must equal {@code value};
+     *       the schema is a {@code string} with a single-element {@code enum}.</li>
+     *   <li>{@code "X-Header"} — the header must be present;
+     *       the schema is an unconstrained {@code string}.</li>
+     * </ul>
+     * Negative expressions (e.g. {@code "!X-Header"}) are filtered out before reaching
+     * this method and should never be passed here.</p>
+     *
+     * @param headerExpression a Spring MVC header expression; must not be blank or start with {@code !}
+     * @return the populated {@link Parameter} with {@code in: header} and {@code required: true}
+     */
+    @SuppressWarnings("unchecked")
+    private static Parameter buildMappingHeaderParameter(String headerExpression) {
+        int eqIdx = headerExpression.indexOf('=');
+
+        String name;
+        String enumValue = null;
+
+        if (eqIdx >= 0) {
+            name      = headerExpression.substring(0, eqIdx).trim();
+            enumValue = headerExpression.substring(eqIdx + 1).trim();
+        } else {
+            name = headerExpression.trim();
+        }
+
+        Schema<String> schema = new Schema<>();
+        schema.setType("string");
+        if (enumValue != null) {
+            schema.setEnum(List.of(enumValue));
+        }
+
+        Parameter parameter = new HeaderParameter();
+        parameter.setIn("header");
+        parameter.setName(name);
+        parameter.setRequired(true);
+        parameter.setSchema(schema);
+
+        log.trace("  Mapping header [{} = {}] → in:header required:true", name, enumValue);
+        return parameter;
+    }
 
     /**
      * Attempts to build an OpenAPI {@link Parameter} from a single method parameter.

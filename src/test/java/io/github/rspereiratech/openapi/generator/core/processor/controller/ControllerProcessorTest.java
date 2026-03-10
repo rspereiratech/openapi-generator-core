@@ -52,7 +52,7 @@ class ControllerProcessorTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(operationProcessor.buildOperation(any(), anyString(), any(), any()))
+        lenient().when(operationProcessor.buildOperation(any(), anyString(), any(), any(), any()))
                 .thenReturn(new Operation());
         processor = new ControllerProcessorImpl(operationProcessor);
     }
@@ -201,7 +201,7 @@ class ControllerProcessorTest {
                 () -> Assertions.assertTrue(paths.containsKey("/api/v1/items/{id}"),
                         "Expected path /api/v1/items/{id}")
         );
-        verify(operationProcessor, times(2)).buildOperation(any(), anyString(), any(), any());
+        verify(operationProcessor, times(2)).buildOperation(any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -212,7 +212,7 @@ class ControllerProcessorTest {
         Paths paths = openAPI.getPaths();
         Assertions.assertNotNull(paths);
         Assertions.assertTrue(paths.containsKey("/ping"), "Expected /ping to be registered");
-        verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), any(), any());
+        verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -241,7 +241,7 @@ class ControllerProcessorTest {
                 () -> Assertions.assertNotNull(paths.get("/api/v1/resources/{id}").getDelete(), "DELETE /resources/{id}"),
                 () -> Assertions.assertNotNull(paths.get("/api/v1/resources/{id}").getPatch(),  "PATCH /resources/{id}")
         );
-        verify(operationProcessor, times(5)).buildOperation(any(), anyString(), any(), any());
+        verify(operationProcessor, times(5)).buildOperation(any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -323,7 +323,7 @@ class ControllerProcessorTest {
                 () -> Assertions.assertTrue(paths.containsKey("/api/v1/users/{id}"),   "Expected /api/v1/users/{id}"),
                 () -> Assertions.assertTrue(paths.containsKey("/api/v1/users/search"), "Expected /api/v1/users/search")
         );
-        verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), any(), any());
+        verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -394,7 +394,7 @@ class ControllerProcessorTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Collection<String>> tagsCaptor = ArgumentCaptor.forClass(Collection.class);
-        verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), tagsCaptor.capture(), any());
+        verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), tagsCaptor.capture(), any(), any());
         Collection<String> captured = tagsCaptor.getValue();
         Assertions.assertTrue(captured.contains("Generic REST API"),
                 "buildOperation must receive 'Generic REST API'");

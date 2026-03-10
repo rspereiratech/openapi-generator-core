@@ -164,8 +164,10 @@ public class ControllerProcessorImpl implements ControllerProcessor {
             PathItem.HttpMethod httpMethod = MAPPING_TO_HTTP.get(ann.annotationType().getSimpleName());
             if (httpMethod != null) {
                 String fullPath = PathUtils.joinPaths(basePath, AnnotationAttributeUtils.extractPath(ann));
+                List<String> mappingHeaders = AnnotationAttributeUtils.getStringArrayValue(ann, "headers");
                 addOperation(openAPI, fullPath, httpMethod,
-                        operationProcessor.buildOperation(method, httpMethod.name(), tags, typeVarMap));
+                        operationProcessor.buildOperation(method, httpMethod.name(), tags, typeVarMap, mappingHeaders),
+                        mappingHeaders);
                 return;
             }
         }
@@ -173,10 +175,12 @@ public class ControllerProcessorImpl implements ControllerProcessor {
         // Fall back to generic @RequestMapping
         findBySimpleName(effectiveAnnotations, "RequestMapping").ifPresent(ann -> {
             String fullPath = PathUtils.joinPaths(basePath, AnnotationAttributeUtils.extractPath(ann));
+            List<String> mappingHeaders = AnnotationAttributeUtils.getStringArrayValue(ann, "headers");
             List<PathItem.HttpMethod> httpMethods = resolveHttpMethods(ann);
             if (httpMethods.isEmpty()) httpMethods = List.of(PathItem.HttpMethod.GET);
             httpMethods.forEach(httpMethod -> addOperation(openAPI, fullPath, httpMethod,
-                    operationProcessor.buildOperation(method, httpMethod.name(), tags, typeVarMap)));
+                    operationProcessor.buildOperation(method, httpMethod.name(), tags, typeVarMap, mappingHeaders),
+                    mappingHeaders));
         });
     }
 
@@ -308,22 +312,50 @@ public class ControllerProcessorImpl implements ControllerProcessor {
      * Adds the given {@link Operation} to the {@link OpenAPI} model under the
      * specified path and HTTP method.
      *
-     * <p>If a {@link PathItem} for the path already exists, the operation is
-     * added to it; otherwise, a new {@link PathItem} is created.</p>
+     * <p>If a {@link PathItem} for the path already exists, the operation is added to it;
+     * otherwise, a new {@link PathItem} is created.</p>
      *
-     * <p>Logs the HTTP method and path at debug level.</p>
+     * <p>When multiple Spring MVC methods map to the same path and HTTP method via different
+     * header conditions (e.g. a generic {@code search()} and a header-conditioned
+     * {@code searchV2(headers = "x-dashboard-name=pcs")}), the more specific variant
+     * (with mapping headers) takes precedence. A headerless operation will not overwrite
+     * an existing operation that already carries header parameters derived from mapping headers.</p>
      *
-     * @param openAPI    the OpenAPI model to update; must not be {@code null}
-     * @param path       the URL path (combined base + sub-path); must not be {@code null}
-     * @param httpMethod the HTTP method for the operation; must not be {@code null}
-     * @param operation  the OpenAPI operation to add; must not be {@code null}
+     * @param openAPI        the OpenAPI model to update; must not be {@code null}
+     * @param path           the URL path (combined base + sub-path); must not be {@code null}
+     * @param httpMethod     the HTTP method for the operation; must not be {@code null}
+     * @param operation      the OpenAPI operation to add; must not be {@code null}
+     * @param mappingHeaders header expressions extracted from the mapping annotation; may be empty
      */
     private void addOperation(OpenAPI openAPI, String path,
-                               PathItem.HttpMethod httpMethod, Operation operation) {
+                               PathItem.HttpMethod httpMethod, Operation operation,
+                               List<String> mappingHeaders) {
         log.debug("  {} {}", httpMethod, path);
         PathItem pathItem = openAPI.getPaths().getOrDefault(path, new PathItem());
+
+        if (mappingHeaders.isEmpty() && hasHeaderMappingParams(pathItem, httpMethod)) {
+            log.debug("  Skipping {} {} (no mapping headers) — more specific variant already registered", httpMethod, path);
+            return;
+        }
+
         pathItem.operation(httpMethod, operation);
         openAPI.getPaths().addPathItem(path, pathItem);
+    }
+
+    /**
+     * Returns {@code true} if the existing operation at the given {@code httpMethod} on
+     * {@code pathItem} already carries at least one {@code in: header} parameter, indicating
+     * it was generated from a header-conditioned mapping annotation.
+     *
+     * @param pathItem   the path item to inspect; must not be {@code null}
+     * @param httpMethod the HTTP method to check; must not be {@code null}
+     * @return {@code true} if a header parameter is present on the existing operation
+     */
+    private static boolean hasHeaderMappingParams(PathItem pathItem, PathItem.HttpMethod httpMethod) {
+        Operation existing = pathItem.readOperationsMap().get(httpMethod);
+        if (existing == null || existing.getParameters() == null) return false;
+        return existing.getParameters().stream()
+                .anyMatch(p -> "header".equals(p.getIn()));
     }
 
     // ------------------------------------------------------------------
