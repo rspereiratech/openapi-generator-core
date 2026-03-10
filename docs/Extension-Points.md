@@ -15,29 +15,18 @@ Add a custom handler when you need to control how a specific type is represented
 ```java
 public class MyTypeSchemaHandler implements TypeSchemaHandler {
 
-    private TypeSchemaHandler next;
-
     @Override
-    public void setNext(TypeSchemaHandler next) {
-        this.next = next;
+    public boolean supports(Type type) {
+        if (!(type instanceof Class<?> clazz)) return false;
+        return MySpecialType.class.isAssignableFrom(clazz);
     }
 
     @Override
-    public Schema<?> handle(Type type, ModelConverters converters) {
-        if (!isMyType(type)) {
-            return next != null ? next.handle(type, converters) : null;
-        }
-
-        // Build and return the schema for this type
+    public Schema<?> resolve(Type type, SchemaProcessor schemaProcessor) {
         Schema<?> schema = new Schema<>();
         schema.setType("string");
         schema.setFormat("my-format");
         return schema;
-    }
-
-    private boolean isMyType(Type type) {
-        if (!(type instanceof Class<?> clazz)) return false;
-        return MySpecialType.class.isAssignableFrom(clazz);
     }
 }
 ```
@@ -51,21 +40,14 @@ public class MyProcessorFactory extends DefaultProcessorFactory {
 
     @Override
     public SchemaProcessor createSchemaProcessor() {
-        TypeSchemaHandler modelConverters = new ModelConvertersTypeSchemaHandler();
-        TypeSchemaHandler pageable     = new PageableTypeSchemaHandler();
-        TypeSchemaHandler page         = new PageTypeSchemaHandler();
-        TypeSchemaHandler flux         = new FluxTypeSchemaHandler();
-        TypeSchemaHandler voidHandler  = new VoidTypeSchemaHandler();
-        TypeSchemaHandler myHandler    = new MyTypeSchemaHandler();
-
-        // Build the chain: void → flux → page → pageable → my → modelConverters
-        pageable.setNext(myHandler);
-        myHandler.setNext(modelConverters);
-        page.setNext(pageable);
-        flux.setNext(page);
-        voidHandler.setNext(flux);
-
-        return new SchemaProcessorImpl(voidHandler);
+        return new SchemaProcessorImpl(List.of(
+            new VoidTypeSchemaHandler(),
+            new FluxTypeSchemaHandler(),
+            new PageTypeSchemaHandler(),
+            new PageableTypeSchemaHandler(),
+            new MyTypeSchemaHandler(),          // inserted before catch-all
+            new ModelConvertersTypeSchemaHandler()
+        ));
     }
 }
 ```
@@ -134,6 +116,62 @@ GeneratorConfig config = GeneratorConfig.builder()
 ```
 
 If your annotation **does** transitively meta-annotate `@RestController` (via composed annotation), it is detected automatically — no configuration needed.
+
+---
+
+## 5. Custom Constraint Handler
+
+`ValidationSchemaEnricher` uses a chain of `ConstraintHandler`s to map Jakarta Bean Validation annotations to OpenAPI schema properties. Add a custom handler to support annotations not covered by the default chain — for example, Hibernate Validator's `@Length`.
+
+### Implement `ConstraintHandler`
+
+```java
+public class LengthConstraintHandler implements ConstraintHandler {
+
+    @Override
+    public boolean supports(Annotation annotation) {
+        return annotation instanceof Length;
+    }
+
+    @Override
+    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+        Length length = (Length) annotation;
+        if (length.min() > 0)                property.setMinLength(length.min());
+        if (length.max() < Integer.MAX_VALUE) property.setMaxLength(length.max());
+    }
+}
+```
+
+### Wire into the enricher
+
+Build a list that combines the built-in handlers with your custom one and pass it to `ValidationSchemaEnricher`:
+
+```java
+List<ConstraintHandler> handlers = new ArrayList<>();
+handlers.addAll(ValidationSchemaEnricher.defaultHandlers()); // convenience method
+handlers.add(new LengthConstraintHandler());
+
+ValidationSchemaEnricher enricher = new ValidationSchemaEnricher(handlers);
+```
+
+Then supply the enricher to `ModelConvertersTypeSchemaHandler` and wire it via a custom `ProcessorFactory`:
+
+```java
+public class MyProcessorFactory extends DefaultProcessorFactory {
+
+    @Override
+    public SchemaProcessor createSchemaProcessor() {
+        ValidationSchemaEnricher enricher = new ValidationSchemaEnricher(handlers);
+        return new SchemaProcessorImpl(List.of(
+            new VoidTypeSchemaHandler(),
+            new FluxTypeSchemaHandler(),
+            new PageTypeSchemaHandler(),
+            new PageableTypeSchemaHandler(),
+            new ModelConvertersTypeSchemaHandler(enricher)
+        ));
+    }
+}
+```
 
 ---
 

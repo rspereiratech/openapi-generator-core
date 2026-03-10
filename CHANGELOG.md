@@ -6,11 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.1.0] — 2026-03-09
+## [1.1.0] — 2026-03-10
+
+### Added
+
+- `ValidationSchemaEnricher` (Chain of Responsibility) — propagates Jakarta Bean Validation constraints to OpenAPI schema properties after `ModelConverters` resolution; replaces the former static utility `BeanValidationConstraintApplier`
+- `ConstraintHandler` interface — strategy element in the constraint enrichment chain; each implementation maps one Jakarta Bean Validation annotation to its OpenAPI schema equivalent
+- Built-in `ConstraintHandler` implementations under `processor/schema/constraints/`: `MinConstraintHandler`, `MaxConstraintHandler`, `DecimalMinConstraintHandler`, `DecimalMaxConstraintHandler`, `PositiveConstraintHandler`, `PositiveOrZeroConstraintHandler`, `NegativeConstraintHandler`, `NegativeOrZeroConstraintHandler`, `SizeConstraintHandler`, `NotNullConstraintHandler`, `NotBlankConstraintHandler`, `NotEmptyConstraintHandler`, `PatternConstraintHandler`, `EmailConstraintHandler`
+- `ValidationSchemaEnricher` accepts a custom `List<ConstraintHandler>` for extension (e.g. Hibernate Validator `@Length`) without modifying library code
+- `AnnotationAttributeUtils`: added `getAnnotationAttribute`, `getAnnotationArrayAttribute`, `getClassAttribute` — centralise reflective annotation reading across all processors
 
 ### Fixed
 
 - `ParameterProcessorImpl`: parameters annotated with `@Parameter(hidden = true)` are now omitted from the generated spec (aligns with SpringDoc behaviour); previously they were included with an `x-hidden: true` vendor extension
+- `ValidationSchemaEnricher`: `@DecimalMin(inclusive = false)` and `@DecimalMax(inclusive = false)` now correctly set `exclusiveMinimum: true` / `exclusiveMaximum: true`; previously the `inclusive` flag was silently ignored
+- `ValidationSchemaEnricher`: `@NotBlank` now sets `minLength: 1` in addition to `nullable: false`
+- `ValidationSchemaEnricher`: `@NotEmpty` now sets `minLength: 1` (strings) or `minItems: 1` (collections/arrays) in addition to `nullable: false`
+- `ValidationSchemaEnricher`: `@Size` on `Collection`, `Map`, and array types now maps to `minItems` / `maxItems` instead of `minLength` / `maxLength`
 
 ---
 

@@ -86,6 +86,8 @@ This avoids exposing the `Pageable` interface as a complex schema object.
 
 Delegates to Swagger's `ModelConverters`, which resolves Java types to OpenAPI schemas via reflection. This handles all standard DTO classes, enums, collections, maps, and primitives.
 
+After resolution, `ValidationSchemaEnricher` is invoked to propagate Jakarta Bean Validation constraints (e.g. `@Min`, `@Size`, `@NotBlank`) from field annotations to the corresponding schema properties. See [Architecture](Architecture.md#validationschemaenricher) for details.
+
 Schemas generated here are registered in the shared schema registry and later merged into `components/schemas` by the `SchemaRegistryMergePostProcessor`.
 
 ---

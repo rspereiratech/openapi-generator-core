@@ -37,43 +37,82 @@ mvn test
 
 ## Adding a New Schema Type Handler
 
-Schema type handlers implement the `TypeSchemaHandler` interface and form a chain of responsibility. Each handler either handles the given type or delegates to the next handler in the chain.
+Schema type handlers implement the `TypeSchemaHandler` interface and form a chain of responsibility. Each handler either handles the given type or delegates to the next.
 
 ### 1. Implement `TypeSchemaHandler`
 
 ```java
 public class MyTypeSchemaHandler implements TypeSchemaHandler {
 
-    private TypeSchemaHandler next;
-
     @Override
-    public void setNext(TypeSchemaHandler next) {
-        this.next = next;
+    public boolean supports(Type type) {
+        if (!(type instanceof Class<?> clazz)) return false;
+        return MySpecialType.class.isAssignableFrom(clazz);
     }
 
     @Override
-    public Schema<?> handle(Type type, ModelConverters converters) {
-        if (/* this handler can handle the type */) {
-            // build and return the schema
-        }
-        return next != null ? next.handle(type, converters) : null;
+    public Schema<?> resolve(Type type, SchemaProcessor schemaProcessor) {
+        Schema<?> schema = new Schema<>();
+        schema.setType("string");
+        schema.setFormat("my-format");
+        return schema;
     }
 }
 ```
 
 ### 2. Register the handler in `DefaultProcessorFactory`
 
-Add your handler to the chain in `DefaultProcessorFactory.createSchemaProcessor()`, before the catch-all `ModelConvertersTypeSchemaHandler`:
+Add your handler to the list in `DefaultProcessorFactory.createSchemaProcessor()`, before the catch-all `ModelConvertersTypeSchemaHandler`:
 
 ```java
-TypeSchemaHandler myHandler = new MyTypeSchemaHandler();
-myHandler.setNext(modelConvertersHandler);
-// insert your handler at the appropriate position in the chain
+return new SchemaProcessorImpl(List.of(
+    new VoidTypeSchemaHandler(),
+    new FluxTypeSchemaHandler(),
+    new PageTypeSchemaHandler(),
+    new PageableTypeSchemaHandler(),
+    new MyTypeSchemaHandler(),          // inserted before catch-all
+    new ModelConvertersTypeSchemaHandler()
+));
 ```
 
 ### 3. Write tests
 
 Add a test class under `src/test/java/.../processor/schema/handlers/` following the pattern of the existing handler tests.
+
+---
+
+## Adding a New Constraint Handler
+
+Constraint handlers implement the `ConstraintHandler` interface and are used by `ValidationSchemaEnricher` to map Jakarta Bean Validation annotations to OpenAPI schema properties.
+
+Add a new handler when you need to support an annotation not covered by the default chain (e.g. Hibernate Validator `@Length`, `@Range`).
+
+### 1. Implement `ConstraintHandler`
+
+```java
+public class LengthConstraintHandler implements ConstraintHandler {
+
+    @Override
+    public boolean supports(Annotation annotation) {
+        return annotation instanceof Length;
+    }
+
+    @Override
+    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+        Length length = (Length) annotation;
+        if (length.min() > 0)                property.setMinLength(length.min());
+        if (length.max() < Integer.MAX_VALUE) property.setMaxLength(length.max());
+    }
+}
+```
+
+### 2. Wire it into `ValidationSchemaEnricher`
+
+Pass the handler via a custom `ProcessorFactory` (see [Extension-Points.md](docs/Extension-Points.md#5-custom-constraint-handler)).
+
+### 3. Write tests
+
+Add a test class under `src/test/java/.../processor/schema/constraints/` following the pattern of `ConstraintHandlersTest`.
 
 ---
 
@@ -127,7 +166,8 @@ Always write a test that verifies the annotation is correctly resolved in the ge
 ## Code Style
 
 - Follow the existing package structure — one interface and one `*Impl` implementation per processor.
-- Chain-of-responsibility handlers go under `processor/schema/handlers/`.
+- Schema type handlers go under `processor/schema/handlers/`.
+- Constraint handlers go under `processor/schema/constraints/`.
 - Post-processors go under `postprocessor/`.
 - Utilities go under `utils/`.
 - All public classes and methods must have Javadoc.

@@ -127,6 +127,24 @@ Resolves Java `Type` objects to OpenAPI `Schema` objects using a **chain of resp
 
 ---
 
+### `ValidationSchemaEnricher`
+
+After `ModelConverters` resolves a DTO class, the raw schema does not always carry constraint metadata (e.g. `minimum`, `maxLength`). `ValidationSchemaEnricher` fills this gap by reflectively reading Jakarta Bean Validation annotations from class fields and applying them to the already-resolved schema properties.
+
+It uses its own **chain of responsibility** of `ConstraintHandler`s — one per annotation type. The default chain covers all standard constraints. A custom chain can be supplied for extension (e.g. Hibernate Validator `@Length`):
+
+```java
+new ValidationSchemaEnricher(List.of(
+    new MinConstraintHandler(),
+    new LengthConstraintHandler(),   // custom
+    // ...
+));
+```
+
+Constraint traversal walks the full superclass hierarchy and resolves `@JsonProperty` names to match the schema property keys produced by `ModelConverters`.
+
+---
+
 ### Post-Processors
 
 Run after all controllers have been processed. See [Post-Processors](Post-Processors.md) for details.
@@ -189,13 +207,30 @@ core/
 │   └── schema/
 │       ├── SchemaProcessor.java
 │       ├── SchemaProcessorImpl.java
-│       └── handlers/
-│           ├── TypeSchemaHandler.java
-│           ├── VoidTypeSchemaHandler.java
-│           ├── FluxTypeSchemaHandler.java
-│           ├── PageTypeSchemaHandler.java
-│           ├── PageableTypeSchemaHandler.java
-│           └── ModelConvertersTypeSchemaHandler.java
+│       ├── ValidationSchemaEnricher.java
+│       ├── handlers/
+│       │   ├── TypeSchemaHandler.java
+│       │   ├── VoidTypeSchemaHandler.java
+│       │   ├── FluxTypeSchemaHandler.java
+│       │   ├── PageTypeSchemaHandler.java
+│       │   ├── PageableTypeSchemaHandler.java
+│       │   └── ModelConvertersTypeSchemaHandler.java
+│       └── constraints/
+│           ├── ConstraintHandler.java
+│           ├── MinConstraintHandler.java
+│           ├── MaxConstraintHandler.java
+│           ├── DecimalMinConstraintHandler.java
+│           ├── DecimalMaxConstraintHandler.java
+│           ├── PositiveConstraintHandler.java
+│           ├── PositiveOrZeroConstraintHandler.java
+│           ├── NegativeConstraintHandler.java
+│           ├── NegativeOrZeroConstraintHandler.java
+│           ├── SizeConstraintHandler.java
+│           ├── NotNullConstraintHandler.java
+│           ├── NotBlankConstraintHandler.java
+│           ├── NotEmptyConstraintHandler.java
+│           ├── PatternConstraintHandler.java
+│           └── EmailConstraintHandler.java
 ├── postprocessor/
 │   ├── PostProcessor.java
 │   ├── SchemaRegistryMergePostProcessor.java

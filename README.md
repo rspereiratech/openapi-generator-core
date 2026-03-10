@@ -201,6 +201,7 @@ See [`docs/Architecture.md`](docs/Architecture.md) for the full pipeline breakdo
 | `OperationProcessorImpl` | Maps methods to OpenAPI operations using Spring MVC and SpringDoc annotations |
 | `ParameterProcessorImpl` | Resolves `@PathVariable`, `@RequestParam`, `@RequestHeader`, `@CookieValue`, `Pageable` |
 | `SchemaProcessorImpl` | Chain-of-responsibility for resolving Java types to OpenAPI schemas |
+| `ValidationSchemaEnricher` | Propagates Jakarta Bean Validation constraints to OpenAPI schema properties via a chain of `ConstraintHandler`s |
 | `AnnotationUtils` | Recursive meta-annotation traversal across the full type hierarchy |
 
 ---
@@ -218,6 +219,9 @@ See [`docs/Architecture.md`](docs/Architecture.md) for the full pipeline breakdo
 
 ### Response Status
 `@ResponseStatus`
+
+### Bean Validation (propagated to schema properties)
+`@Min`, `@Max`, `@DecimalMin`, `@DecimalMax`, `@Positive`, `@PositiveOrZero`, `@Negative`, `@NegativeOrZero`, `@Size`, `@NotNull`, `@NotBlank`, `@NotEmpty`, `@Pattern`, `@Email`
 
 ---
 
