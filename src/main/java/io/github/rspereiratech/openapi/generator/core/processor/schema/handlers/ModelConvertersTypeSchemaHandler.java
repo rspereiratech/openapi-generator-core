@@ -10,7 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema.handlers;
 
-import io.github.rspereiratech.openapi.generator.core.processor.schema.BeanValidationConstraintApplier;
+import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.core.converter.ModelConverters;
@@ -30,7 +30,7 @@ import java.lang.reflect.Type;
  * <p>Any referenced component schemas discovered during resolution are registered
  * in the schema registry via {@link SchemaProcessor#getSchemaRegistry()}.
  * Bean Validation constraints are then propagated to those schemas via the
- * supplied {@link BeanValidationConstraintApplier}.
+ * supplied {@link ValidationSchemaEnricher}.
  *
  * @author ruispereira
  */
@@ -38,22 +38,22 @@ import java.lang.reflect.Type;
 @SuppressWarnings("java:S1452")
 public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
 
-    private final BeanValidationConstraintApplier constraintApplier;
+    private final ValidationSchemaEnricher constraintApplier;
 
     /**
-     * Creates an instance with the default {@link BeanValidationConstraintApplier}.
+     * Creates an instance with the default {@link ValidationSchemaEnricher}.
      */
     public ModelConvertersTypeSchemaHandler() {
-        this(new BeanValidationConstraintApplier());
+        this(new ValidationSchemaEnricher());
     }
 
     /**
-     * Creates an instance with a custom {@link BeanValidationConstraintApplier}.
+     * Creates an instance with a custom {@link ValidationSchemaEnricher}.
      *
      * @param constraintApplier the applier to use for Bean Validation propagation;
      *                          must not be {@code null}
      */
-    public ModelConvertersTypeSchemaHandler(BeanValidationConstraintApplier constraintApplier) {
+    public ModelConvertersTypeSchemaHandler(ValidationSchemaEnricher constraintApplier) {
         this.constraintApplier = constraintApplier;
     }
 

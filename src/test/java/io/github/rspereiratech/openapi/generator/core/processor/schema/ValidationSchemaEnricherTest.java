@@ -10,6 +10,8 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema;
 
+import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
@@ -39,9 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class BeanValidationConstraintApplierTest {
+class ValidationSchemaEnricherTest {
 
-    private final BeanValidationConstraintApplier applier = new BeanValidationConstraintApplier();
+    private final ValidationSchemaEnricher applier = new ValidationSchemaEnricher();
 
     // ==========================================================================
     // Fixtures

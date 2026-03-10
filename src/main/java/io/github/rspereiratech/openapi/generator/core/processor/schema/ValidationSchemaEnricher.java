@@ -53,7 +53,7 @@ import java.util.stream.Stream;
  *
  * <p>Constraint mapping is handled by a Chain of Responsibility of {@link ConstraintHandler}s.
  * The default chain covers all standard Jakarta Bean Validation constraints. A custom chain
- * can be supplied via {@link #BeanValidationConstraintApplier(List)} to add or replace handlers
+ * can be supplied via {@link #ValidationSchemaEnricher(List)} to add or replace handlers
  * (e.g. for Hibernate Validator extensions such as {@code @Length}).
  *
  * <p>Supported constraints (default chain):
@@ -82,7 +82,7 @@ import java.util.stream.Stream;
  * @author ruispereira
  * @see ConstraintHandler
  */
-public class BeanValidationConstraintApplier {
+public class ValidationSchemaEnricher {
 
     /** Ordered chain of handlers consulted in sequence; the first match wins. */
     private final List<ConstraintHandler> handlers;
@@ -91,7 +91,7 @@ public class BeanValidationConstraintApplier {
      * Creates an instance with the default handler chain covering all standard
      * Jakarta Bean Validation constraints.
      */
-    public BeanValidationConstraintApplier() {
+    public ValidationSchemaEnricher() {
         this(List.of(
                 new MinConstraintHandler(),
                 new MaxConstraintHandler(),
@@ -120,7 +120,7 @@ public class BeanValidationConstraintApplier {
      * @throws NullPointerException     if {@code handlers} is {@code null}
      * @throws IllegalArgumentException if {@code handlers} is empty
      */
-    public BeanValidationConstraintApplier(List<ConstraintHandler> handlers) {
+    public ValidationSchemaEnricher(List<ConstraintHandler> handlers) {
         Preconditions.checkNotNull(handlers, "'handlers' must not be null");
         Preconditions.checkArgument(!handlers.isEmpty(), "'handlers' must not be empty");
         this.handlers = List.copyOf(handlers);

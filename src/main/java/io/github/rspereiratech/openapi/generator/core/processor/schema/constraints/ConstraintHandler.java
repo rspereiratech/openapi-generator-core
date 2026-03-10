@@ -10,7 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema.constraints;
 
-import io.github.rspereiratech.openapi.generator.core.processor.schema.BeanValidationConstraintApplier;
+import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.lang.annotation.Annotation;
@@ -18,7 +18,7 @@ import java.lang.reflect.Type;
 
 /**
  * Strategy element in the Chain of Responsibility used by
- * {@link BeanValidationConstraintApplier} to map a single Jakarta Bean Validation
+ * {@link ValidationSchemaEnricher} to map a single Jakarta Bean Validation
  * annotation to its OpenAPI schema equivalent.
  *
  * <p>Handlers are tried in order; the first one whose {@link #supports} method returns
@@ -26,11 +26,11 @@ import java.lang.reflect.Type;
  * Unrecognised annotations are skipped silently when no handler matches.
  *
  * <p>This design allows the constraint mapping to be extended without modifying
- * {@link BeanValidationConstraintApplier}: pass a custom handler list to
- * {@link BeanValidationConstraintApplier#BeanValidationConstraintApplier(java.util.List)}.
+ * {@link ValidationSchemaEnricher}: pass a custom handler list to
+ * {@link ValidationSchemaEnricher#ValidationSchemaEnricher(java.util.List)}.
  *
  * @author ruispereira
- * @see BeanValidationConstraintApplier
+ * @see ValidationSchemaEnricher
  */
 @SuppressWarnings("java:S1452") // Schema<?> is intentional
 public interface ConstraintHandler {
