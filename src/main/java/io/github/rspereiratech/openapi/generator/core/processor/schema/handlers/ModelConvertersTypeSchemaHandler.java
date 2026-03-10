@@ -39,6 +39,7 @@ import java.lang.reflect.Type;
 @SuppressWarnings("java:S1452")
 public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
 
+    /** Propagates Bean Validation constraints to the resolved schemas. */
     private final ValidationSchemaEnricher constraintApplier;
 
     /**
