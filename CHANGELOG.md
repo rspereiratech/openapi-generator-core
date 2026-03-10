@@ -10,19 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- `ParameterProcessorImpl`: built-in `DEFAULT_IGNORED_PARAM_TYPES` set — silently skips `Locale`, `Principal`, `HttpServletRequest`, `HttpServletResponse`, `HttpSession`, `ServletRequest`, `ServletResponse`, `WebRequest`, `NativeWebRequest`, `BindingResult`, `Errors`, `Model`, `ModelMap`; mirrors SpringDoc default behaviour
-- `ParameterProcessorImpl`: new constructor `ParameterProcessorImpl(SchemaProcessor, boolean ignoreDefaultParamTypes, Set<String> additionalIgnoredTypes)` for full control over the effective ignore set
-- `GeneratorConfig`: `ignoreDefaultParamTypes` boolean field (default `true`) — when `false`, the built-in ignore list is disabled
-- `GeneratorConfig`: `additionalIgnoredParamTypes` list — extra FQNs ignored on top of the defaults
-- `ProcessorFactory`: new `createParameterProcessor(SchemaProcessor, boolean, Set<String>)` overload; existing single-argument signature preserved as a `default` method
-- `ControllerProcessorImpl`: generates `in: header` parameters from the `headers` attribute of Spring MVC mapping annotations (e.g. `@PostMapping(headers = "x-dashboard-name=pcs")`); `key=value` expressions produce an enum-constrained string schema; when two methods map to the same path and HTTP method, the header-conditioned variant takes precedence
-
----
-
-## [1.1.0] — 2026-03-10
-
-### Added
-
 - `ValidationSchemaEnricher` (Chain of Responsibility) — propagates Jakarta Bean Validation constraints to OpenAPI schema properties after `ModelConverters` resolution; replaces the former static utility `BeanValidationConstraintApplier`
 - `ConstraintHandler` interface — strategy element in the constraint enrichment chain; each implementation maps one Jakarta Bean Validation annotation to its OpenAPI schema equivalent
 - Built-in `ConstraintHandler` implementations under `processor/schema/constraints/`: `MinConstraintHandler`, `MaxConstraintHandler`, `DecimalMinConstraintHandler`, `DecimalMaxConstraintHandler`, `PositiveConstraintHandler`, `PositiveOrZeroConstraintHandler`, `NegativeConstraintHandler`, `NegativeOrZeroConstraintHandler`, `SizeConstraintHandler`, `NotNullConstraintHandler`, `NotBlankConstraintHandler`, `NotEmptyConstraintHandler`, `PatternConstraintHandler`, `EmailConstraintHandler`
@@ -31,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `SortSpecPostProcessor` — post-processor that sorts the `paths` block alphabetically by path string and sorts the `responses` map of every operation by HTTP status-code string; enabled by passing `sortOutput = true` to its constructor; always present in the pipeline — when disabled it is a no-op rather than being omitted
 - `GeneratorConfig.sortOutput` boolean field (default `false`) — when `true`, controllers are sorted alphabetically by canonical class name before processing and `SortSpecPostProcessor` is activated, guaranteeing identical spec output across machines and builds
 - `ProcessorFactory.createPostProcessors` extended with a `boolean sortOutput` parameter forwarded to `SortSpecPostProcessor`
+- `ParameterProcessorImpl`: built-in `DEFAULT_IGNORED_PARAM_TYPES` set — silently skips `Locale`, `Principal`, `HttpServletRequest`, `HttpServletResponse`, `HttpSession`, `ServletRequest`, `ServletResponse`, `WebRequest`, `NativeWebRequest`, `BindingResult`, `Errors`, `Model`, `ModelMap`; mirrors SpringDoc default behaviour
+- `ParameterProcessorImpl`: new constructor `ParameterProcessorImpl(SchemaProcessor, boolean ignoreDefaultParamTypes, Set<String> additionalIgnoredTypes)` for full control over the effective ignore set
+- `GeneratorConfig`: `ignoreDefaultParamTypes` boolean field (default `true`) — when `false`, the built-in ignore list is disabled
+- `GeneratorConfig`: `additionalIgnoredParamTypes` list — extra FQNs ignored on top of the defaults
+- `ProcessorFactory`: new `createParameterProcessor(SchemaProcessor, boolean, Set<String>)` overload; existing single-argument signature preserved as a `default` method
+- `ControllerProcessorImpl`: generates `in: header` parameters from the `headers` attribute of Spring MVC mapping annotations (e.g. `@PostMapping(headers = "x-dashboard-name=pcs")`); `key=value` expressions produce an enum-constrained string schema; when two methods map to the same path and HTTP method, the header-conditioned variant takes precedence
 
 ### Fixed
 
