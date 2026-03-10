@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Built-in `ConstraintHandler` implementations under `processor/schema/constraints/`: `MinConstraintHandler`, `MaxConstraintHandler`, `DecimalMinConstraintHandler`, `DecimalMaxConstraintHandler`, `PositiveConstraintHandler`, `PositiveOrZeroConstraintHandler`, `NegativeConstraintHandler`, `NegativeOrZeroConstraintHandler`, `SizeConstraintHandler`, `NotNullConstraintHandler`, `NotBlankConstraintHandler`, `NotEmptyConstraintHandler`, `PatternConstraintHandler`, `EmailConstraintHandler`
 - `ValidationSchemaEnricher` accepts a custom `List<ConstraintHandler>` for extension (e.g. Hibernate Validator `@Length`) without modifying library code
 - `AnnotationAttributeUtils`: added `getAnnotationAttribute`, `getAnnotationArrayAttribute`, `getClassAttribute` — centralise reflective annotation reading across all processors
+- `SortPathsPostProcessor` — post-processor that sorts the `paths` block alphabetically by path string; enabled by passing `sortOutput = true` to its constructor; always present in the pipeline — when disabled it is a no-op rather than being omitted
+- `GeneratorConfig.sortOutput` boolean field (default `false`) — when `true`, controllers are sorted alphabetically by canonical class name before processing and `SortPathsPostProcessor` is activated, guaranteeing identical spec output across machines and builds
+- `ProcessorFactory.createPostProcessors` extended with a `boolean sortOutput` parameter forwarded to `SortPathsPostProcessor`
 
 ### Fixed
 

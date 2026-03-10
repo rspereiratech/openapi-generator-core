@@ -185,7 +185,8 @@ class GeneratorConfigTest {
                 () -> Assertions.assertEquals("",             config.description(), "default description blank"),
                 () -> Assertions.assertEquals(OutputFormat.YAML, config.outputFormat(), "default outputFormat"),
                 () -> Assertions.assertTrue(config.securitySchemes().isEmpty(), "default securitySchemes empty"),
-                () -> Assertions.assertNull(config.contextPath(), "default contextPath is null")
+                () -> Assertions.assertNull(config.contextPath(), "default contextPath is null"),
+                () -> Assertions.assertFalse(config.sortOutput(), "default sortOutput is false")
         );
     }
 
@@ -492,6 +493,27 @@ class GeneratorConfigTest {
                 () -> config.controllerAnnotations().add("com.example.Hacked"),
                 "getControllerAnnotations() must return an unmodifiable list"
         );
+    }
+
+    // ==========================================================================
+    // sortOutput
+    // ==========================================================================
+
+    @Test
+    void sortOutput_defaultsFalse() {
+        GeneratorConfig config = GeneratorConfig.builder()
+                .basePackage("com.example")
+                .build();
+        Assertions.assertFalse(config.sortOutput());
+    }
+
+    @Test
+    void sortOutput_setTrue_storedCorrectly() {
+        GeneratorConfig config = GeneratorConfig.builder()
+                .basePackage("com.example")
+                .sortOutput(true)
+                .build();
+        Assertions.assertTrue(config.sortOutput());
     }
 
     // ==========================================================================

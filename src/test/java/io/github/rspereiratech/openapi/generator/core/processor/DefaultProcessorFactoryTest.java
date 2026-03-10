@@ -10,6 +10,8 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor;
 
+import io.github.rspereiratech.openapi.generator.core.postprocessor.PostProcessor;
+import io.github.rspereiratech.openapi.generator.core.postprocessor.SortPathsPostProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.controller.ControllerProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.controller.ControllerProcessorImpl;
 import io.github.rspereiratech.openapi.generator.core.processor.operation.OperationProcessor;
@@ -26,9 +28,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DefaultProcessorFactoryTest {
 
@@ -92,5 +97,36 @@ class DefaultProcessorFactoryTest {
                 Mockito.mock(OperationProcessor.class));
         assertNotNull(cp);
         assertInstanceOf(ControllerProcessorImpl.class, cp);
+    }
+
+    // ==========================================================================
+    // createPostProcessors
+    // ==========================================================================
+
+    @Test
+    void createPostProcessors_alwaysReturnsFourProcessors() {
+        SchemaProcessor sp = factory.createSchemaProcessor();
+        List<PostProcessor> withSort    = factory.createPostProcessors(sp, true);
+        List<PostProcessor> withoutSort = factory.createPostProcessors(sp, false);
+
+        // SortPathsPostProcessor is always present; sortOutput only controls its behaviour.
+        assertNotNull(withSort);
+        assertNotNull(withoutSort);
+        org.junit.jupiter.api.Assertions.assertEquals(4, withSort.size());
+        org.junit.jupiter.api.Assertions.assertEquals(4, withoutSort.size());
+    }
+
+    @Test
+    void createPostProcessors_containsSortPathsPostProcessor() {
+        SchemaProcessor sp = factory.createSchemaProcessor();
+        List<PostProcessor> processors = factory.createPostProcessors(sp, true);
+        boolean found = processors.stream().anyMatch(p -> p instanceof SortPathsPostProcessor);
+        org.junit.jupiter.api.Assertions.assertTrue(found, "SortPathsPostProcessor must always be in the chain");
+    }
+
+    @Test
+    void createPostProcessors_nullSchemaProcessor_throwsNullPointerException() {
+        assertThrows(NullPointerException.class,
+                () -> factory.createPostProcessors(null, false));
     }
 }

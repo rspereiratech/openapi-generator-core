@@ -28,6 +28,8 @@ import io.github.rspereiratech.openapi.generator.core.processor.response.Respons
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessorImpl;
 
+import com.google.common.base.Preconditions;
+
 import java.util.List;
 
 /**
@@ -76,12 +78,12 @@ public class DefaultProcessorFactory implements ProcessorFactory {
 
     @Override
     public List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor, boolean sortOutput) {
-        var processors = new java.util.ArrayList<PostProcessor>(List.of(
+        Preconditions.checkNotNull(schemaProcessor, "'schemaProcessor' must not be null");
+        return List.of(
                 new SchemaRegistryMergePostProcessor(schemaProcessor),
-                new PruneUnreferencedSchemasPostProcessor()
-        ));
-        if (sortOutput) processors.add(new SortPathsPostProcessor());
-        processors.add(new UniqueOperationIdPostProcessor());
-        return List.copyOf(processors);
+                new PruneUnreferencedSchemasPostProcessor(),
+                new SortPathsPostProcessor(sortOutput),
+                new UniqueOperationIdPostProcessor()
+        );
     }
 }

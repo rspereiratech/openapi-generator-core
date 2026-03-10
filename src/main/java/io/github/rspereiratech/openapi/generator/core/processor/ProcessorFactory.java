@@ -102,10 +102,18 @@ public interface ProcessorFactory {
      * Creates the ordered list of {@link PostProcessor}s to apply after all
      * controllers have been processed.
      *
-     * @param schemaProcessor the shared schema processor, passed to processors that need it
-     * @param sortOutput      when {@code true}, a {@link io.github.rspereiratech.openapi.generator.core.postprocessor.SortPathsPostProcessor}
-     *                        is included to sort paths alphabetically for deterministic output
+     * <p>All post-processors are always included in the returned list. Behaviour
+     * that depends on configuration (e.g. path sorting) is controlled by passing
+     * the relevant flag into the processor itself rather than by omitting it from
+     * the list.
+     *
+     * @param schemaProcessor the shared schema processor, passed to processors that need it;
+     *                        must not be {@code null}
+     * @param sortOutput      forwarded to {@link io.github.rspereiratech.openapi.generator.core.postprocessor.SortPathsPostProcessor};
+     *                        when {@code true} the processor sorts paths alphabetically,
+     *                        otherwise it is a no-op
      * @return the post-processor chain; never {@code null}
+     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
      */
     List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor, boolean sortOutput);
 }

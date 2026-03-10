@@ -10,6 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.postprocessor;
 
+import com.google.common.base.Preconditions;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
 
@@ -27,26 +28,45 @@ import java.util.List;
  * processor ensures that every generation run produces the same path ordering,
  * making spec diffs readable and CI comparisons reliable.
  *
- * <p>This processor is included in the pipeline only when
- * {@link io.github.rspereiratech.openapi.generator.core.config.GeneratorConfig#sortOutput()}
- * is {@code true}.
+ * <p>Sorting is enabled by passing {@code sortOutput = true} to the constructor.
+ * When disabled, {@link #process(OpenAPI)} is a no-op and the paths block is
+ * left unchanged. This allows the processor to always be present in the pipeline
+ * without conditional inclusion logic in the factory.
  *
- * <p>Null or empty {@code paths} blocks are silently skipped.
+ * <p>Null or empty {@code paths} blocks are silently skipped when sorting is enabled.
  *
  * @author ruispereira
  * @see io.github.rspereiratech.openapi.generator.core.config.GeneratorConfig#sortOutput()
  */
 public class SortPathsPostProcessor implements PostProcessor {
 
+    /** Whether path sorting is active for this processor instance. */
+    private final boolean sortOutput;
+
     /**
-     * Replaces the {@code paths} block with a new one whose entries are
-     * sorted alphabetically by path string. All path items and their
-     * operations are preserved unchanged.
+     * Creates a new processor.
      *
-     * @param openAPI the OpenAPI model to sort; must not be {@code null}
+     * @param sortOutput {@code true} to sort paths alphabetically;
+     *                   {@code false} to make {@link #process(OpenAPI)} a no-op
+     */
+    public SortPathsPostProcessor(boolean sortOutput) {
+        this.sortOutput = sortOutput;
+    }
+
+    /**
+     * Replaces the {@code paths} block with a new one whose entries are sorted
+     * alphabetically by path string when {@code sortOutput} is {@code true}.
+     * When {@code sortOutput} is {@code false} this method returns immediately
+     * without modifying the model. All path items and their operations are
+     * preserved unchanged.
+     *
+     * @param openAPI the OpenAPI model to process; must not be {@code null}
+     * @throws NullPointerException if {@code openAPI} is {@code null}
      */
     @Override
     public void process(OpenAPI openAPI) {
+        Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");
+        if (!sortOutput) return;
         Paths paths = openAPI.getPaths();
         if (paths == null || paths.isEmpty()) return;
 

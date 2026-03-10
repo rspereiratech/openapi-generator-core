@@ -135,3 +135,20 @@ Annotations that already transitively meta-annotate `@RestController` are detect
 ```java
 .outputFormat(OutputFormat.JSON)
 ```
+
+---
+
+### `sortOutput`
+
+`boolean` — default: `false`
+
+When `true`, enables deterministic output:
+
+- Controllers are sorted alphabetically by canonical class name before processing.
+- The `paths` block is sorted alphabetically after all controllers are processed.
+
+This guarantees that the generated spec is byte-for-byte identical across machines and builds, regardless of filesystem or JVM ordering. Useful for version-controlled spec files where noise-free diffs matter.
+
+```java
+.sortOutput(true)
+```

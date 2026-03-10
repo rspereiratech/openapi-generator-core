@@ -19,20 +19,22 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SortPathsPostProcessorTest {
 
-    private final SortPathsPostProcessor processor = new SortPathsPostProcessor();
+    private final SortPathsPostProcessor enabled  = new SortPathsPostProcessor(true);
+    private final SortPathsPostProcessor disabled = new SortPathsPostProcessor(false);
 
     // ==========================================================================
-    // Sorting
+    // Sorting enabled
     // ==========================================================================
 
     @Test
     void process_unsortedPaths_sortedAlphabetically() {
         OpenAPI openAPI = openApiWith("/z/last", "/a/first", "/m/middle");
 
-        processor.process(openAPI);
+        enabled.process(openAPI);
 
         assertEquals(List.of("/a/first", "/m/middle", "/z/last"),
                 List.copyOf(openAPI.getPaths().keySet()));
@@ -42,7 +44,7 @@ class SortPathsPostProcessorTest {
     void process_alreadySorted_remainsSorted() {
         OpenAPI openAPI = openApiWith("/a/first", "/b/second", "/c/third");
 
-        processor.process(openAPI);
+        enabled.process(openAPI);
 
         assertEquals(List.of("/a/first", "/b/second", "/c/third"),
                 List.copyOf(openAPI.getPaths().keySet()));
@@ -52,9 +54,24 @@ class SortPathsPostProcessorTest {
     void process_singlePath_noChange() {
         OpenAPI openAPI = openApiWith("/only");
 
-        processor.process(openAPI);
+        enabled.process(openAPI);
 
         assertEquals(List.of("/only"), List.copyOf(openAPI.getPaths().keySet()));
+    }
+
+    // ==========================================================================
+    // Sorting disabled
+    // ==========================================================================
+
+    @Test
+    void process_sortOutputFalse_pathOrderUnchanged() {
+        OpenAPI openAPI = openApiWith("/z/last", "/a/first", "/m/middle");
+
+        disabled.process(openAPI);
+
+        // Original insertion order must be preserved — no sorting applied.
+        assertEquals(List.of("/z/last", "/a/first", "/m/middle"),
+                List.copyOf(openAPI.getPaths().keySet()));
     }
 
     // ==========================================================================
@@ -62,9 +79,14 @@ class SortPathsPostProcessorTest {
     // ==========================================================================
 
     @Test
+    void process_nullOpenAPI_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> enabled.process(null));
+    }
+
+    @Test
     void process_nullPaths_doesNotThrow() {
         OpenAPI openAPI = new OpenAPI();
-        processor.process(openAPI);
+        enabled.process(openAPI);
         assertNull(openAPI.getPaths());
     }
 
@@ -72,7 +94,7 @@ class SortPathsPostProcessorTest {
     void process_emptyPaths_doesNotThrow() {
         OpenAPI openAPI = new OpenAPI();
         openAPI.setPaths(new Paths());
-        processor.process(openAPI);
+        enabled.process(openAPI);
         assertEquals(0, openAPI.getPaths().size());
     }
 
