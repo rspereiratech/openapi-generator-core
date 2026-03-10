@@ -152,3 +152,48 @@ This guarantees that the generated spec is byte-for-byte identical across machin
 ```java
 .sortOutput(true)
 ```
+
+---
+
+### `ignoreDefaultParamTypes`
+
+`boolean` — default: `true`
+
+When `true`, the following framework-injected parameter types are silently skipped and never appear as OpenAPI parameters:
+
+| Type | Package |
+|---|---|
+| `Locale` | `java.util` |
+| `Principal` | `java.security` |
+| `HttpServletRequest` | `jakarta.servlet.http` |
+| `HttpServletResponse` | `jakarta.servlet.http` |
+| `HttpSession` | `jakarta.servlet.http` |
+| `ServletRequest` | `jakarta.servlet` |
+| `ServletResponse` | `jakarta.servlet` |
+| `WebRequest` | `org.springframework.web.context.request` |
+| `NativeWebRequest` | `org.springframework.web.context.request` |
+| `BindingResult` | `org.springframework.validation` |
+| `Errors` | `org.springframework.validation` |
+| `Model` | `org.springframework.ui` |
+| `ModelMap` | `org.springframework.ui` |
+
+Set to `false` to disable this behaviour and include all parameter types as-is:
+
+```java
+.ignoreDefaultParamTypes(false)
+```
+
+---
+
+### `additionalIgnoredParamTypes`
+
+`List<String>` — default: _(empty)_
+
+Fully-qualified class names of extra parameter types to ignore, applied on top of the built-in defaults (when `ignoreDefaultParamTypes` is `true`). Useful for project-specific types that should never be exposed as OpenAPI parameters.
+
+```java
+.additionalIgnoredParamType("com.example.security.TenantContext")
+.additionalIgnoredParamType("com.example.audit.AuditContext")
+// or replace the entire list
+.additionalIgnoredParamTypes(List.of("com.example.security.TenantContext"))
+```

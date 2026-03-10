@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `ParameterProcessorImpl`: built-in `DEFAULT_IGNORED_PARAM_TYPES` set — silently skips `Locale`, `Principal`, `HttpServletRequest`, `HttpServletResponse`, `HttpSession`, `ServletRequest`, `ServletResponse`, `WebRequest`, `NativeWebRequest`, `BindingResult`, `Errors`, `Model`, `ModelMap`; mirrors SpringDoc default behaviour
+- `ParameterProcessorImpl`: new constructor `ParameterProcessorImpl(SchemaProcessor, boolean ignoreDefaultParamTypes, Set<String> additionalIgnoredTypes)` for full control over the effective ignore set
+- `GeneratorConfig`: `ignoreDefaultParamTypes` boolean field (default `true`) — when `false`, the built-in ignore list is disabled
+- `GeneratorConfig`: `additionalIgnoredParamTypes` list — extra FQNs ignored on top of the defaults
+- `ProcessorFactory`: new `createParameterProcessor(SchemaProcessor, boolean, Set<String>)` overload; existing single-argument signature preserved as a `default` method
+- `ControllerProcessorImpl`: generates `in: header` parameters from the `headers` attribute of Spring MVC mapping annotations (e.g. `@PostMapping(headers = "x-dashboard-name=pcs")`); `key=value` expressions produce an enum-constrained string schema; when two methods map to the same path and HTTP method, the header-conditioned variant takes precedence
+
+---
+
 ## [1.1.0] — 2026-03-10
 
 ### Added
