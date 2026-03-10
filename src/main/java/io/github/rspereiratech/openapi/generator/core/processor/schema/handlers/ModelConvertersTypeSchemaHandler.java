@@ -10,6 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema.handlers;
 
+import com.google.common.base.Preconditions;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.swagger.v3.core.converter.AnnotatedType;
@@ -54,6 +55,7 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
      *                          must not be {@code null}
      */
     public ModelConvertersTypeSchemaHandler(ValidationSchemaEnricher constraintApplier) {
+        Preconditions.checkNotNull(constraintApplier, "'constraintApplier' must not be null");
         this.constraintApplier = constraintApplier;
     }
 
