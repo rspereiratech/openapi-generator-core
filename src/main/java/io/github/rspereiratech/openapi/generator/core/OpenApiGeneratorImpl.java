@@ -108,7 +108,9 @@ public class OpenApiGeneratorImpl implements OpenApiGenerator {
             log.warn("No controllers found in packages: {}", config.basePackages());
         }
 
-        // 2a – Sort controllers for deterministic output (when enabled)
+        // 2a – Sort controllers alphabetically by canonical name (when sortOutput is enabled).
+        //      This, combined with SortPathsPostProcessor, guarantees that the generated spec
+        //      is identical across machines and builds regardless of filesystem ordering.
         if (config.sortOutput()) {
             controllers = controllers.stream()
                     .sorted(Comparator.comparing(Class::getCanonicalName))

@@ -18,16 +18,33 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Sorts the paths in the generated OpenAPI spec alphabetically.
+ * {@link PostProcessor} that sorts the {@code paths} section of the generated
+ * OpenAPI spec alphabetically by path string.
  *
- * <p>Without this, path order depends on the order controllers and methods
- * are returned by reflection, which is not guaranteed to be deterministic
- * across JVMs, machines, or build environments.
+ * <p>Without explicit sorting, path order depends on the order in which
+ * controllers and methods are returned by reflection — which is not guaranteed
+ * to be stable across JVMs, operating systems, or build environments. This
+ * processor ensures that every generation run produces the same path ordering,
+ * making spec diffs readable and CI comparisons reliable.
+ *
+ * <p>This processor is included in the pipeline only when
+ * {@link io.github.rspereiratech.openapi.generator.core.config.GeneratorConfig#sortOutput()}
+ * is {@code true}.
+ *
+ * <p>Null or empty {@code paths} blocks are silently skipped.
  *
  * @author ruispereira
+ * @see io.github.rspereiratech.openapi.generator.core.config.GeneratorConfig#sortOutput()
  */
 public class SortPathsPostProcessor implements PostProcessor {
 
+    /**
+     * Replaces the {@code paths} block with a new one whose entries are
+     * sorted alphabetically by path string. All path items and their
+     * operations are preserved unchanged.
+     *
+     * @param openAPI the OpenAPI model to sort; must not be {@code null}
+     */
     @Override
     public void process(OpenAPI openAPI) {
         Paths paths = openAPI.getPaths();
