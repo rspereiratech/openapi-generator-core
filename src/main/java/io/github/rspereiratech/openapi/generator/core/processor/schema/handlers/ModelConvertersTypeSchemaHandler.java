@@ -53,6 +53,7 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
      *
      * @param enricher the enricher to use for Bean Validation propagation;
      *                 must not be {@code null}
+     * @throws NullPointerException if {@code enricher} is {@code null}
      */
     public ModelConvertersTypeSchemaHandler(ValidationSchemaEnricher enricher) {
         Preconditions.checkNotNull(enricher, "'enricher' must not be null");
