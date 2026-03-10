@@ -31,6 +31,7 @@ import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaPro
 import com.google.common.base.Preconditions;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Default {@link ProcessorFactory} implementation.
@@ -50,8 +51,10 @@ public class DefaultProcessorFactory implements ProcessorFactory {
     }
 
     @Override
-    public ParameterProcessor createParameterProcessor(SchemaProcessor schemaProcessor) {
-        return new ParameterProcessorImpl(schemaProcessor);
+    public ParameterProcessor createParameterProcessor(SchemaProcessor schemaProcessor,
+                                                        boolean ignoreDefaultParamTypes,
+                                                        Set<String> additionalIgnoredTypes) {
+        return new ParameterProcessorImpl(schemaProcessor, ignoreDefaultParamTypes, additionalIgnoredTypes);
     }
 
     @Override

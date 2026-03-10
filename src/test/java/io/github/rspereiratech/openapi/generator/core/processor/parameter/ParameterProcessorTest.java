@@ -24,8 +24,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.Locale;
+
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,6 +92,10 @@ class ParameterProcessorTest {
         public void withHiddenPageable(
                 @io.swagger.v3.oas.annotations.Parameter(hidden = true)
                 org.springframework.data.domain.Pageable pageable) {}
+
+        public void withLocale(@RequestParam Locale locale) {}
+        public void withLocaleAndOther(@RequestParam Locale locale, @RequestParam String status) {}
+        public void withCustomIgnoredType(@RequestParam java.util.Currency currency) {}
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -291,5 +298,57 @@ class ParameterProcessorTest {
     void constructor_nullSchemaProcessor_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
                 () -> new ParameterProcessorImpl(null));
+    }
+
+    // ==========================================================================
+    // Ignored param types — default list
+    // ==========================================================================
+
+    @Test
+    void locale_isIgnoredByDefault() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withLocale", Locale.class));
+        assertTrue(params.isEmpty(), "Locale must be ignored by the default ignore list");
+    }
+
+    @Test
+    void locale_isIncluded_whenDefaultsDisabled() throws Exception {
+        ParameterProcessor noDefaults = new ParameterProcessorImpl(schemaProcessor, false, Set.of());
+        List<Parameter> params = noDefaults.processParameters(method("withLocale", Locale.class));
+        assertEquals(1, params.size(), "Locale must appear when default ignore list is disabled");
+    }
+
+    @Test
+    void locale_ignored_otherParamStillIncluded() throws Exception {
+        List<Parameter> params = processor.processParameters(
+                method("withLocaleAndOther", Locale.class, String.class));
+        assertEquals(1, params.size(), "Only the non-ignored param should be present");
+        assertEquals("status", params.get(0).getName());
+    }
+
+    // ==========================================================================
+    // Ignored param types — additional list
+    // ==========================================================================
+
+    @Test
+    void additionalIgnoredType_isSkipped() throws Exception {
+        ParameterProcessor withExtra = new ParameterProcessorImpl(
+                schemaProcessor, true, Set.of("java.util.Currency"));
+        List<Parameter> params = withExtra.processParameters(
+                method("withCustomIgnoredType", java.util.Currency.class));
+        assertTrue(params.isEmpty(), "Custom additional ignored type must be skipped");
+    }
+
+    @Test
+    void additionalIgnoredType_doesNotAffectOtherProcessor() throws Exception {
+        // The default processor does not ignore Currency
+        List<Parameter> params = processor.processParameters(
+                method("withCustomIgnoredType", java.util.Currency.class));
+        assertEquals(1, params.size(), "Currency should not be ignored by the default processor");
+    }
+
+    @Test
+    void constructor_nullAdditionalIgnoredTypes_throwsNullPointerException() {
+        assertThrows(NullPointerException.class,
+                () -> new ParameterProcessorImpl(schemaProcessor, true, null));
     }
 }

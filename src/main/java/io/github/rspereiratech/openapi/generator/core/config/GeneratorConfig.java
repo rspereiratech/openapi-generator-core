@@ -103,7 +103,21 @@ public record GeneratorConfig(
          * alphabetically in the final spec, guaranteeing a deterministic output
          * regardless of filesystem or JVM ordering. Defaults to {@code false}.
          */
-        boolean sortOutput
+        boolean sortOutput,
+
+        /*
+         * When {@code true} (default), the processor skips the built-in set of
+         * framework-injected parameter types (e.g. {@code Locale},
+         * {@code HttpServletRequest}, {@code Principal}) that must never appear
+         * as OpenAPI parameters.
+         */
+        boolean ignoreDefaultParamTypes,
+
+        /*
+         * Additional fully-qualified class names of parameter types to ignore,
+         * on top of the built-in defaults. Never null, may be empty.
+         */
+        List<String> additionalIgnoredParamTypes
 ) {
     /**
      * Compact constructor — enforces immutability and validates required fields.
@@ -140,6 +154,8 @@ public record GeneratorConfig(
         resolvedAnnotations.forEach(fqn -> Preconditions.checkArgument(
                 fqn != null && !fqn.isBlank(), "each controllerAnnotation must not be null or blank"));
         controllerAnnotations = List.copyOf(resolvedAnnotations);
+
+        additionalIgnoredParamTypes = List.copyOf(additionalIgnoredParamTypes != null ? additionalIgnoredParamTypes : List.of());
     }
 
     /**
@@ -167,10 +183,11 @@ public record GeneratorConfig(
      */
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static final class Builder {
-        private final List<String>               basePackages          = new ArrayList<>();
-        private final List<ServerConfig>         servers               = new ArrayList<>();
-        private final List<String>               controllerAnnotations = new ArrayList<>();
-        private final List<SecuritySchemeConfig> securitySchemes       = new ArrayList<>();
+        private final List<String>               basePackages               = new ArrayList<>();
+        private final List<ServerConfig>         servers                    = new ArrayList<>();
+        private final List<String>               controllerAnnotations      = new ArrayList<>();
+        private final List<SecuritySchemeConfig> securitySchemes            = new ArrayList<>();
+        private final List<String>               additionalIgnoredParamTypes = new ArrayList<>();
         private String  outputFile  = "docs/swagger/openapi.yaml";
         private String  title       = "API";
         private String  description = "";
@@ -180,8 +197,9 @@ public record GeneratorConfig(
         private String  contactUrl;
         private String  licenseName;
         private String  licenseUrl;
-        private boolean prettyPrint    = true;
-        private boolean sortOutput     = false;
+        private boolean prettyPrint              = true;
+        private boolean sortOutput               = false;
+        private boolean ignoreDefaultParamTypes  = true;
         private OutputFormat outputFormat = OutputFormat.YAML;
         private String  contextPath;
 
@@ -343,6 +361,45 @@ public record GeneratorConfig(
         public Builder contextPath(String contextPath) { this.contextPath = contextPath; return this; }
 
         /**
+         * Controls whether the built-in set of framework-injected parameter types
+         * (e.g. {@code Locale}, {@code HttpServletRequest}, {@code Principal}) is skipped
+         * during parameter processing. Defaults to {@code true}.
+         *
+         * @param ignoreDefaultParamTypes {@code false} to disable the built-in ignore list
+         * @return this builder
+         */
+        public Builder ignoreDefaultParamTypes(boolean ignoreDefaultParamTypes) {
+            this.ignoreDefaultParamTypes = ignoreDefaultParamTypes;
+            return this;
+        }
+
+        /**
+         * Adds a single fully-qualified class name to the additional ignored parameter types list.
+         *
+         * @param fqn the fully-qualified class name to ignore; must not be {@code null} or blank
+         * @return this builder
+         */
+        public Builder additionalIgnoredParamType(String fqn) {
+            Preconditions.checkNotNull(fqn, "additionalIgnoredParamType must not be null");
+            Preconditions.checkArgument(!fqn.isBlank(), "additionalIgnoredParamType must not be blank");
+            this.additionalIgnoredParamTypes.add(fqn);
+            return this;
+        }
+
+        /**
+         * Replaces the entire list of additional ignored parameter type FQNs.
+         *
+         * @param fqns the list of fully-qualified class names; must not be {@code null}
+         * @return this builder
+         */
+        public Builder additionalIgnoredParamTypes(List<String> fqns) {
+            Preconditions.checkNotNull(fqns, "additionalIgnoredParamTypes must not be null");
+            this.additionalIgnoredParamTypes.clear();
+            this.additionalIgnoredParamTypes.addAll(fqns);
+            return this;
+        }
+
+        /**
          * Sets the output format ({@link OutputFormat#YAML} or {@link OutputFormat#JSON}).
          * Defaults to {@link OutputFormat#YAML} when not specified.
          *
@@ -368,7 +425,8 @@ public record GeneratorConfig(
                     servers, controllerAnnotations,
                     contactName, contactEmail, contactUrl,
                     licenseName, licenseUrl, prettyPrint, outputFormat,
-                    securitySchemes, contextPath, sortOutput);
+                    securitySchemes, contextPath, sortOutput,
+                    ignoreDefaultParamTypes, additionalIgnoredParamTypes);
         }
     }
 }

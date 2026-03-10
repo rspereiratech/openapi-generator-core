@@ -31,6 +31,7 @@ import java.lang.reflect.TypeVariable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -68,20 +69,70 @@ public class ParameterProcessorImpl implements ParameterProcessor {
     );
 
     /**
+     * Built-in set of framework-injected parameter types that must never appear
+     * as OpenAPI parameters. Mirrors the types ignored by SpringDoc by default.
+     */
+    static final Set<String> DEFAULT_IGNORED_PARAM_TYPES = Set.of(
+            "java.util.Locale",
+            "java.security.Principal",
+            "jakarta.servlet.http.HttpServletRequest",
+            "jakarta.servlet.http.HttpServletResponse",
+            "jakarta.servlet.http.HttpSession",
+            "jakarta.servlet.ServletRequest",
+            "jakarta.servlet.ServletResponse",
+            "org.springframework.web.context.request.WebRequest",
+            "org.springframework.web.context.request.NativeWebRequest",
+            "org.springframework.validation.BindingResult",
+            "org.springframework.validation.Errors",
+            "org.springframework.ui.Model",
+            "org.springframework.ui.ModelMap"
+    );
+
+    /**
+     * Effective set of parameter type FQNs to skip during processing.
+     * Built from the default list (when enabled) and any additional entries.
+     */
+    private final Set<String> ignoredParamTypes;
+
+    /**
      * Shared {@link SchemaProcessor} used to generate OpenAPI schemas
      * for method parameters.
      */
     private final SchemaProcessor schemaProcessor;
 
     /**
-     * Creates a new {@code ParameterProcessorImpl}.
+     * Creates a new {@code ParameterProcessorImpl} with the default ignored types enabled
+     * and no additional ignored types.
      *
-     * @param schemaProcessor the shared schema processor used to generate
-     *                        parameter schemas; must not be {@code null}
+     * @param schemaProcessor the shared schema processor; must not be {@code null}
      * @throws NullPointerException if {@code schemaProcessor} is {@code null}
      */
     public ParameterProcessorImpl(SchemaProcessor schemaProcessor) {
+        this(schemaProcessor, true, Set.of());
+    }
+
+    /**
+     * Creates a new {@code ParameterProcessorImpl} with full control over which
+     * parameter types are ignored.
+     *
+     * @param schemaProcessor          the shared schema processor; must not be {@code null}
+     * @param ignoreDefaultParamTypes  when {@code true}, the built-in {@link #DEFAULT_IGNORED_PARAM_TYPES}
+     *                                 are added to the effective ignore set
+     * @param additionalIgnoredTypes   extra FQNs to ignore on top of the defaults; must not be {@code null}
+     * @throws NullPointerException if {@code schemaProcessor} or {@code additionalIgnoredTypes} is {@code null}
+     */
+    public ParameterProcessorImpl(SchemaProcessor schemaProcessor,
+                                   boolean ignoreDefaultParamTypes,
+                                   Set<String> additionalIgnoredTypes) {
         this.schemaProcessor = Preconditions.checkNotNull(schemaProcessor, "schemaProcessor must not be null");
+        Preconditions.checkNotNull(additionalIgnoredTypes, "additionalIgnoredTypes must not be null");
+        if (ignoreDefaultParamTypes) {
+            var combined = new java.util.HashSet<>(DEFAULT_IGNORED_PARAM_TYPES);
+            combined.addAll(additionalIgnoredTypes);
+            this.ignoredParamTypes = Set.copyOf(combined);
+        } else {
+            this.ignoredParamTypes = Set.copyOf(additionalIgnoredTypes);
+        }
     }
 
     @Override
@@ -171,6 +222,11 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                                                   Map<TypeVariable<?>, Type> typeVarMap) {
         if (Arrays.stream(annotations)
                 .anyMatch(ann -> "RequestBody".equals(ann.annotationType().getSimpleName()))) {
+            return Optional.empty();
+        }
+
+        if (ignoredParamTypes.contains(param.getType().getName())) {
+            log.trace("Skipping ignored param type: {}", param.getType().getName());
             return Optional.empty();
         }
 

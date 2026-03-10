@@ -91,7 +91,7 @@ public class OpenApiGeneratorImpl implements OpenApiGenerator {
 
         // Build a fresh processor chain (avoids schema registry accumulation across calls).
         SchemaProcessor      sp           = factory.createSchemaProcessor();
-        ParameterProcessor   paramProc    = factory.createParameterProcessor(sp);
+        ParameterProcessor   paramProc    = factory.createParameterProcessor(sp, config.ignoreDefaultParamTypes(), Set.copyOf(config.additionalIgnoredParamTypes()));
         RequestBodyProcessor bodyProc     = factory.createRequestBodyProcessor(sp);
         ResponseProcessor    responseProc = factory.createResponseProcessor(sp);
         OperationProcessor   opProc       = factory.createOperationProcessor(paramProc, bodyProc, responseProc);

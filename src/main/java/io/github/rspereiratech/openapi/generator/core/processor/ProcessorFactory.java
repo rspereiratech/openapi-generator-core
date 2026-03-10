@@ -19,6 +19,7 @@ import io.github.rspereiratech.openapi.generator.core.processor.response.Respons
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Factory interface for creating the OpenAPI processor chain.
@@ -55,12 +56,26 @@ public interface ProcessorFactory {
     SchemaProcessor createSchemaProcessor();
 
     /**
-     * Creates the parameter processor.
+     * Creates the parameter processor with default ignored types enabled and no additional ones.
      *
      * @param schemaProcessor the shared schema processor created by {@link #createSchemaProcessor()}
      * @return a new {@link ParameterProcessor} instance
      */
-    ParameterProcessor createParameterProcessor(SchemaProcessor schemaProcessor);
+    default ParameterProcessor createParameterProcessor(SchemaProcessor schemaProcessor) {
+        return createParameterProcessor(schemaProcessor, true, Set.of());
+    }
+
+    /**
+     * Creates the parameter processor with explicit control over which parameter types are ignored.
+     *
+     * @param schemaProcessor         the shared schema processor
+     * @param ignoreDefaultParamTypes when {@code true}, the built-in framework-injected types are skipped
+     * @param additionalIgnoredTypes  extra FQNs to ignore on top of the defaults
+     * @return a new {@link ParameterProcessor} instance
+     */
+    ParameterProcessor createParameterProcessor(SchemaProcessor schemaProcessor,
+                                                 boolean ignoreDefaultParamTypes,
+                                                 Set<String> additionalIgnoredTypes);
 
     /**
      * Creates the request-body processor.
