@@ -36,6 +36,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link io.github.rspereiratech.openapi.generator.core.utils.TypeUtils}.
+ *
+ * <p>Covers void detection, generic type unwrapping ({@code ResponseEntity}, {@code Optional},
+ * {@code Page}), collection/map element type extraction, type-variable resolution,
+ * and generic array types.
+ */
 class TypeUtilsTest {
 
     // ==========================================================================

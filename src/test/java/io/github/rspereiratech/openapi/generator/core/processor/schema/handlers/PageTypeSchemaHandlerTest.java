@@ -29,6 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * Unit tests for {@link PageTypeSchemaHandler}.
+ *
+ * <p>Verifies that {@code Page<T>} produces a structured paginated schema named
+ * {@code Page{T}} with the expected fields ({@code content}, {@code page},
+ * {@code size}, {@code totalElements}, {@code totalPages}, {@code last}),
+ * and that the schema is registered in the component schema registry.
+ */
 @ExtendWith(MockitoExtension.class)
 class PageTypeSchemaHandlerTest {
 

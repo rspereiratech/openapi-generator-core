@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
 /**
@@ -23,15 +22,13 @@ import java.lang.reflect.Type;
  *
  * @author ruispereira
  */
-public class NotNullConstraintHandler implements ConstraintHandler {
+public class NotNullConstraintHandler extends AbstractConstraintHandler<NotNull> {
+
+    /** Creates a handler for {@link NotNull}. */
+    public NotNullConstraintHandler() { super(NotNull.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof NotNull;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(NotNull ann, Type fieldType, Schema<?> property) {
         property.setNullable(false);
     }
 }

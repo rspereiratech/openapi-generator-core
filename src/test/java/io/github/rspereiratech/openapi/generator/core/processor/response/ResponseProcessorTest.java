@@ -41,6 +41,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * Unit tests for {@link ResponseProcessorImpl}.
+ *
+ * <p>Covers default status-code inference (GET→200, POST→201, void→204), {@code @ResponseStatus}
+ * override, explicit {@code @ApiResponse} / {@code @ApiResponses} handling, schema resolution,
+ * media-type derivation from {@code produces} attributes, composed schema variants
+ * (oneOf/allOf/anyOf/{@code @ArraySchema}), configurable default produces media type,
+ * and the {@code "default"} response-code sentinel.
+ */
 @ExtendWith(MockitoExtension.class)
 class ResponseProcessorTest {
 
@@ -61,7 +70,7 @@ class ResponseProcessorTest {
             if (type == void.class || type == Void.class) return null;
             return new Schema<>();
         });
-        processor = new ResponseProcessorImpl(schemaProcessor);
+        processor = new ResponseProcessorImpl(schemaProcessor, "*/*");
     }
 
     // ==========================================================================
@@ -100,6 +109,13 @@ class ResponseProcessorTest {
 
         @PutMapping
         public String putReturnsString() { return ""; }
+
+        @PutMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Not Found", content = @io.swagger.v3.oas.annotations.media.Content)
+        })
+        public void putWithExplicitResponses() {}
 
         @PatchMapping
         public String patchReturnsString() { return ""; }
@@ -196,6 +212,23 @@ class ResponseProcessorTest {
                         schema = @io.swagger.v3.oas.annotations.media.Schema(
                                 oneOf = {String.class})))
         public String apiResponseWithOneOfAndMediaType() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.Operation(responses = {
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        description = "success",
+                        content = @io.swagger.v3.oas.annotations.media.Content(
+                                schema = @io.swagger.v3.oas.annotations.media.Schema(oneOf = {String.class})))
+        })
+        public String apiResponseNoResponseCode() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "default", description = "ok")
+        public String apiResponseExplicitDefaultCode() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse
+        public String apiResponseBlankDescription() { return ""; }
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -301,6 +334,17 @@ class ResponseProcessorTest {
     void patch_nonVoidReturn_produces200() throws Exception {
         ApiResponses responses = processor.processResponses(method("patchReturnsString"), "PATCH");
         assertTrue(responses.containsKey("200"), "PATCH with non-void return should produce 200");
+    }
+
+    @Test
+    void put_withExplicitApiResponses_usesAnnotationDescriptions() throws Exception {
+        ApiResponses responses = processor.processResponses(method("putWithExplicitResponses"), "PUT");
+        assertAll(
+                () -> assertTrue(responses.containsKey("200"), "200 must be present"),
+                () -> assertEquals("Updated successfully", responses.get("200").getDescription()),
+                () -> assertTrue(responses.containsKey("404"), "404 must be present"),
+                () -> assertEquals("Not Found", responses.get("404").getDescription())
+        );
     }
 
     @Test
@@ -471,13 +515,33 @@ class ResponseProcessorTest {
     }
 
     // ==========================================================================
+    // @ApiResponse with blank / "default" responseCode → "default" key
+    // ==========================================================================
+
+    @Test
+    void apiResponseNoResponseCode_usesDefaultKey() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseNoResponseCode"), "GET");
+        assertTrue(responses.containsKey("default"),
+                "Blank responseCode must produce 'default' key, not '200'");
+        assertFalse(responses.containsKey("200"),
+                "'200' must not appear when responseCode is blank");
+    }
+
+    @Test
+    void apiResponseExplicitDefaultCode_usesDefaultKey() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseExplicitDefaultCode"), "GET");
+        assertTrue(responses.containsKey("default"),
+                "Explicit responseCode='default' must produce 'default' key");
+    }
+
+    // ==========================================================================
     // Constructor preconditions
     // ==========================================================================
 
     @Test
     void constructor_nullSchemaProcessor_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new ResponseProcessorImpl(null));
+                () -> new ResponseProcessorImpl(null, "*/*"));
     }
 
     @Test
@@ -520,5 +584,16 @@ class ResponseProcessorTest {
         ApiResponses responses = customProc.processResponses(method("getReturnsString"), "GET");
         assertNotNull(responses.get("200").getContent().get("*/*"),
                 "Blank defaultProducesMediaType must fall back to '*/*'");
+    }
+
+    // ==========================================================================
+    // description fallback for blank @ApiResponse.description
+    // ==========================================================================
+
+    @Test
+    void apiResponseBlankDescription_defaultCode_fallsBackToDefaultResponse() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseBlankDescription"), "GET");
+        assertEquals("default response", responses.get("default").getDescription(),
+                "Blank description on a 'default' response must fall back to 'default response'");
     }
 }

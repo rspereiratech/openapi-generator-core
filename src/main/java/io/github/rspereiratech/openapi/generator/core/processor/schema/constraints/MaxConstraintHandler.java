@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Max;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -24,15 +23,13 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class MaxConstraintHandler implements ConstraintHandler {
+public class MaxConstraintHandler extends AbstractConstraintHandler<Max> {
+
+    /** Creates a handler for {@link Max}. */
+    public MaxConstraintHandler() { super(Max.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Max;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
-        property.setMaximum(BigDecimal.valueOf(((Max) annotation).value()));
+    protected void applyTyped(Max ann, Type fieldType, Schema<?> property) {
+        property.setMaximum(BigDecimal.valueOf(ann.value()));
     }
 }

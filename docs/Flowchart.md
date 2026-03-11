@@ -75,14 +75,14 @@ START
 │  → query param  │  │ @ResponseStatus    ││      │
 │                 │  │ or HTTP defaults   ││      │
 │ @RequestHeader  │  │ (POST→201,         ││      │
-│  → header param │  │  DELETE→204,       ││      │
+│  → header param │  │  void→204,         ││      │
 │                 │  │  others→200)       ││      │
 │ @CookieValue    │  └────────┬───────────┘│      │
 │  → cookie param │           │            │      │
 │                 │           ▼            │      │
 │ Pageable        │  ┌────────────────────┐│      │
-│  → page + size  │  │  SchemaProcessor   ││      │
-│    query params │  │  (chain of resp.)  ││      │
+│  → query param  │  │  SchemaProcessor   ││      │
+│   ($ref Pageable│  │  (chain of resp.)  ││      │
 └─────────────────┘  │                    ││      │
                      │  void/Void → null  ││      │
        ▼             │  Flux<T> → array   ││      │
@@ -110,7 +110,11 @@ START
 │     Remove schemas not referenced            │
 │     by any $ref in the model                 │
 │                                              │
-│  3. UniqueOperationIdPostProcessor           │
+│  3. SortSpecPostProcessor                    │
+│     Sort paths and responses alphabetically  │
+│     (enabled when sortOutput=true)           │
+│                                              │
+│  4. UniqueOperationIdPostProcessor           │
 │     Disambiguate duplicate operationIds      │
 │     by appending numeric suffix (_1, _2...)  │
 └──────────────────┬───────────────────────────┘
@@ -150,14 +154,14 @@ SchemaProcessor.resolve(type)
             ▼
 ┌───────────────────────┐
 │  PageTypeSchemaHandler │
-│  type is Page<T>?     │──── YES ──► build Page{T} schema with
-└───────────┬───────────┘             content, page, size,
-            │ NO                      totalElements, totalPages, last
+│  type is Page<T>?     │──── YES ──► build Page{T} schema (11 props)
+└───────────┬───────────┘             + SortObject + PageableObject
+            │ NO                      component schemas
             ▼
 ┌─────────────────────────────┐
 │  PageableTypeSchemaHandler   │
-│  type is Pageable/PageRequest│── YES ──► expand to page + size
-└─────────────┬───────────────┘           query parameters
+│  type is Pageable/PageRequest│── YES ──► register Pageable component
+└─────────────┬───────────────┘           schema; return $ref to it
               │ NO
               ▼
 ┌──────────────────────────────────┐

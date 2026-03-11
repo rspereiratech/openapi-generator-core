@@ -21,6 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+/**
+ * Unit tests for {@link OpenApiModelBuilder}.
+ *
+ * <p>Verifies server-URL construction with and without a {@code contextPath}, and
+ * checks that the assembled {@link io.swagger.v3.oas.models.OpenAPI} model contains
+ * the expected servers and components.
+ */
 class OpenApiModelBuilderTest {
 
     private GeneratorConfig configWithAppName(String contextPath) {

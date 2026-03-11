@@ -30,6 +30,13 @@ import java.util.Map;
 @SuppressWarnings("java:S1452")
 public class PageableTypeSchemaHandler implements TypeSchemaHandler {
 
+    /**
+     * Returns {@code true} if {@code type} is {@code org.springframework.data.domain.Pageable}
+     * or {@code org.springframework.data.domain.PageRequest}.
+     *
+     * @param type the type to test; must not be {@code null}
+     * @return {@code true} for {@code Pageable} or {@code PageRequest}; {@code false} otherwise
+     */
     @Override
     public boolean supports(Type type) {
         if (!(type instanceof Class<?> c)) return false;
@@ -38,6 +45,21 @@ public class PageableTypeSchemaHandler implements TypeSchemaHandler {
                 || "org.springframework.data.domain.PageRequest".equals(name);
     }
 
+    /**
+     * Ensures a {@code Pageable} component schema is registered and returns a
+     * {@code $ref} pointing to it.
+     *
+     * <p>The component schema is an object with three properties:
+     * <ul>
+     *   <li>{@code page} — integer ≥ 0</li>
+     *   <li>{@code size} — integer ≥ 1</li>
+     *   <li>{@code sort} — array of strings</li>
+     * </ul>
+     *
+     * @param type            the {@code Pageable} or {@code PageRequest} type (unused beyond gate check)
+     * @param schemaProcessor the shared processor whose registry is populated with the component schema
+     * @return a {@code $ref} schema pointing to {@code #/components/schemas/Pageable}
+     */
     @Override
     public Schema<?> resolve(Type type, SchemaProcessor schemaProcessor) {
         Map<String, Schema<?>> registry = schemaProcessor.getSchemaRegistry();

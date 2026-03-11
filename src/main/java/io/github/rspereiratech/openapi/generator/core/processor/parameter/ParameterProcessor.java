@@ -56,26 +56,7 @@ public interface ParameterProcessor {
      *         may be empty but never {@code null}
      */
     default List<Parameter> processParameters(Method method) {
-        return processParameters(method, Map.of());
-    }
-
-    /**
-     * Extracts all non-body parameters from the given controller method,
-     * resolving any {@link TypeVariable}s in parameter types using the supplied mapping.
-     *
-     * <p>
-     * Non-body parameters include those annotated with Spring MVC annotations such as:
-     * {@code @PathVariable}, {@code @RequestParam}, {@code @RequestHeader}, {@code @CookieValue}.
-     * {@code @RequestBody} parameters are intentionally excluded.
-     * </p>
-     *
-     * @param method     the controller method to inspect; must not be {@code null}
-     * @param typeVarMap mapping of type variables to concrete types for generic controllers; must not be {@code null}
-     * @return a list of OpenAPI {@link Parameter} objects representing the method parameters;
-     *         may be empty but never {@code null}
-     */
-    default List<Parameter> processParameters(Method method, Map<TypeVariable<?>, Type> typeVarMap) {
-        return processParameters(method, typeVarMap, List.of());
+        return processParameters(method, Map.of(), List.of());
     }
 
     /**

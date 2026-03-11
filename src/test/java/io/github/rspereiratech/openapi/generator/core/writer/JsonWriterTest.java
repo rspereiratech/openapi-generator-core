@@ -22,6 +22,12 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link io.github.rspereiratech.openapi.generator.core.writer.JsonWriter}.
+ *
+ * <p>Verifies that the writer creates parent directories, writes a valid JSON file,
+ * and that the pretty-print flag controls whether the output is indented.
+ */
 class JsonWriterTest {
 
     // ==========================================================================

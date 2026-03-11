@@ -47,16 +47,4 @@ public interface ClasspathScanner {
     @SuppressWarnings("java:S112")
     List<Class<?>> scan(List<String> basePackages, ClassLoader classLoader, Set<String> additionalControllerAnnotations) throws Exception;
 
-    /**
-     * Convenience overload that uses only the built-in Spring controller stereotypes.
-     * Delegates to {@link #scan(List, ClassLoader, Set)}.
-     *
-     * @param basePackages packages to restrict the scan to; must not be empty
-     * @param classLoader  classloader that owns the compiled classes; must not be {@code null}
-     * @return discovered controller classes; never {@code null}
-     * @throws Exception if an unrecoverable I/O error occurs during scanning
-     */
-    default List<Class<?>> scan(List<String> basePackages, ClassLoader classLoader) throws Exception {
-        return scan(basePackages, classLoader, Set.of());
-    }
 }

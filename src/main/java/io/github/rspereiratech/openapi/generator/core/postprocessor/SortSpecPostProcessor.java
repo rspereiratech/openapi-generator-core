@@ -16,7 +16,6 @@ import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -89,7 +88,7 @@ public class SortSpecPostProcessor implements PostProcessor {
         if (paths == null || paths.isEmpty()) return;
 
         List<String> sorted = new ArrayList<>(paths.keySet());
-        Collections.sort(sorted);
+        sorted.sort(null);
 
         Paths ordered = new Paths();
         sorted.forEach(path -> ordered.addPathItem(path, paths.get(path)));
@@ -111,7 +110,7 @@ public class SortSpecPostProcessor implements PostProcessor {
                 .forEach(op -> {
                     ApiResponses responses = op.getResponses();
                     List<String> sorted = new ArrayList<>(responses.keySet());
-                    Collections.sort(sorted);
+                    sorted.sort(null);
 
                     ApiResponses ordered = new ApiResponses();
                     sorted.forEach(code -> ordered.addApiResponse(code, responses.get(code)));

@@ -30,6 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link SchemaRegistryMergePostProcessor}.
+ *
+ * <p>Verifies that schemas accumulated in the shared registry during processing are
+ * merged into {@code components/schemas}, that pre-existing components are preserved,
+ * and that an empty registry leaves the model unchanged.
+ */
 @ExtendWith(MockitoExtension.class)
 class SchemaRegistryMergePostProcessorTest {
 

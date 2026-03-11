@@ -29,6 +29,12 @@ import java.lang.reflect.Type;
 @SuppressWarnings("java:S1452")
 public class FluxTypeSchemaHandler implements TypeSchemaHandler {
 
+    /**
+     * Returns {@code true} if {@code type} is a parameterized {@code reactor.core.publisher.Flux}.
+     *
+     * @param type the type to test; must not be {@code null}
+     * @return {@code true} when {@code type} is {@code Flux<?>}; {@code false} otherwise
+     */
     @Override
     @SuppressWarnings("java:S1872")
     public boolean supports(Type type) {
@@ -37,6 +43,14 @@ public class FluxTypeSchemaHandler implements TypeSchemaHandler {
         return raw instanceof Class<?> c && "reactor.core.publisher.Flux".equals(c.getName());
     }
 
+    /**
+     * Converts a {@code Flux<T>} type to an OpenAPI array schema whose {@code items}
+     * schema is derived from {@code T} by delegating to {@code schemaProcessor}.
+     *
+     * @param type            the {@code Flux<T>} type; must be a parameterized type
+     * @param schemaProcessor the processor used to resolve the item type {@code T}
+     * @return an {@link ArraySchema} wrapping the schema for {@code T}
+     */
     @Override
     public Schema<?> resolve(Type type, SchemaProcessor schemaProcessor) {
         Type itemType = TypeUtils.firstTypeArgument(type);

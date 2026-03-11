@@ -34,6 +34,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Unit tests for {@link RequestBodyProcessorImpl}.
+ *
+ * <p>Covers detection of {@code @RequestBody}-annotated parameters, the {@code required}
+ * flag, media-type resolution from {@code consumes} attributes, schema delegation,
+ * configurable default consumes media type, and Swagger {@code @RequestBody} override
+ * via {@code @Schema(implementation=...)}.
+ */
 @ExtendWith(MockitoExtension.class)
 class RequestBodyProcessorTest {
 
@@ -46,7 +54,7 @@ class RequestBodyProcessorTest {
     void setUp() {
         lenient().when(schemaProcessor.toSchema(any())).thenReturn(new Schema<>());
         lenient().when(schemaProcessor.toSchema(any(), any())).thenReturn(new Schema<>());
-        processor = new RequestBodyProcessorImpl(schemaProcessor);
+        processor = new RequestBodyProcessorImpl(schemaProcessor, "application/json");
     }
 
     // ==========================================================================
@@ -178,7 +186,7 @@ class RequestBodyProcessorTest {
     @Test
     void constructor_nullSchemaProcessor_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new RequestBodyProcessorImpl(null));
+                () -> new RequestBodyProcessorImpl(null, "application/json"));
     }
 
     // ==========================================================================

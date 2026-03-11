@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -25,17 +24,14 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class DecimalMaxConstraintHandler implements ConstraintHandler {
+public class DecimalMaxConstraintHandler extends AbstractConstraintHandler<DecimalMax> {
+
+    /** Creates a handler for {@link DecimalMax}. */
+    public DecimalMaxConstraintHandler() { super(DecimalMax.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof DecimalMax;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
-        DecimalMax dMax = (DecimalMax) annotation;
-        property.setMaximum(new BigDecimal(dMax.value()));
-        if (!dMax.inclusive()) property.setExclusiveMaximum(true);
+    protected void applyTyped(DecimalMax ann, Type fieldType, Schema<?> property) {
+        property.setMaximum(new BigDecimal(ann.value()));
+        if (!ann.inclusive()) property.setExclusiveMaximum(true);
     }
 }

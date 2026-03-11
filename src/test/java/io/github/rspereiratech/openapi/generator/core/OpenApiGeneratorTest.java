@@ -22,6 +22,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 
+/**
+ * Integration tests for {@link OpenApiGeneratorImpl}.
+ *
+ * <p>Exercises the full generation pipeline end-to-end using fixture controllers
+ * in {@code fixtures.integration}, verifying that the generated YAML/JSON spec
+ * is written to disk and contains the expected structural elements.
+ */
 class OpenApiGeneratorTest {
 
     private static final String FIXTURE_PACKAGE =

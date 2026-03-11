@@ -42,6 +42,14 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Unit tests for {@link ControllerProcessorImpl}.
+ *
+ * <p>Covers path registration, HTTP verb mapping, tag derivation, annotation
+ * inheritance from interfaces and abstract superclasses, and multi-tag hierarchy
+ * resolution. Uses a mock {@link OperationProcessor} to isolate the controller
+ * processing logic.
+ */
 @ExtendWith(MockitoExtension.class)
 class ControllerProcessorTest {
 

@@ -27,6 +27,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * Unit tests for {@link PageableTypeSchemaHandler}.
+ *
+ * <p>Verifies that {@code Pageable} and {@code PageRequest} types are handled and
+ * resolved to a named {@code Pageable} schema registered in the component registry,
+ * and that other types are not handled by this handler.
+ */
 @ExtendWith(MockitoExtension.class)
 class PageableTypeSchemaHandlerTest {
 

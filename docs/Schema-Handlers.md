@@ -50,18 +50,27 @@ Flux<OrderDto>  →  { type: array, items: { $ref: '#/components/schemas/OrderDt
 
 **Handles:** `Page<T>` (Spring Data)
 
-Generates a structured paginated schema with the following fields:
+Generates a structured paginated schema named `Page{T}` (e.g. `PageOrderDto`) and registers it in `components/schemas`. The property order matches SpringDoc's default output:
 
 | Field | Type | Description |
 |---|---|---|
-| `content` | `array` of `T` | Items in the current page |
-| `page` | `integer` | Current page number (0-based) |
-| `size` | `integer` | Number of items per page |
 | `totalElements` | `integer` (int64) | Total number of items across all pages |
-| `totalPages` | `integer` | Total number of pages |
+| `totalPages` | `integer` (int32) | Total number of pages |
+| `size` | `integer` (int32) | Number of items per page |
+| `content` | `array` of `T` | Items in the current page |
+| `number` | `integer` (int32) | Current page number (0-based) |
+| `first` | `boolean` | Whether this is the first page |
 | `last` | `boolean` | Whether this is the last page |
+| `sort` | `array` of `$ref: SortObject` | Sort criteria applied to the page |
+| `numberOfElements` | `integer` (int32) | Number of elements on this page |
+| `pageable` | `$ref: PageableObject` | Pagination metadata |
+| `empty` | `boolean` | Whether the page has no content |
 
-The schema is named `Page{T}` (e.g. `PageOrderDto`) and registered in `components/schemas`.
+In addition, two helper component schemas are registered if not already present:
+
+**`SortObject`** properties: `direction`, `nullHandling`, `ascending`, `property`, `ignoreCase`
+
+**`PageableObject`** properties: `offset`, `sort` (array of `$ref: SortObject`), `paged`, `pageNumber`, `pageSize`, `unpaged`
 
 ---
 
@@ -69,14 +78,15 @@ The schema is named `Page{T}` (e.g. `PageOrderDto`) and registered in `component
 
 **Handles:** `Pageable`, `PageRequest` (Spring Data)
 
-Instead of generating a schema, this handler expands `Pageable` parameters into two explicit query parameters:
+Registers a `Pageable` component schema in `components/schemas` (if not already present) and returns a `$ref` pointing to it. The component schema has three properties:
 
-| Parameter | Type | Description |
+| Property | Type | Constraint |
 |---|---|---|
-| `page` | `integer` | Page number (0-based) |
-| `size` | `integer` | Page size |
+| `page` | `integer` (int32) | minimum 0 |
+| `size` | `integer` (int32) | minimum 1 |
+| `sort` | `array` of `string` | — |
 
-This avoids exposing the `Pageable` interface as a complex schema object.
+When used as a method parameter (via `ParameterProcessorImpl`), the result is a single `query` parameter with a `$ref` to `Pageable`, which keeps the spec concise while preserving full schema metadata.
 
 ---
 

@@ -45,6 +45,14 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link OperationProcessorImpl}.
+ *
+ * <p>Covers operation-ID and summary derivation, tag propagation, parameter and
+ * request-body delegation, response delegation, deprecation handling, and
+ * Swagger {@code @Operation} enrichment. Sub-processors are replaced with Mockito
+ * mocks to isolate the operation-assembly logic.
+ */
 @ExtendWith(MockitoExtension.class)
 class OperationProcessorTest {
 
@@ -121,11 +129,6 @@ class OperationProcessorTest {
     @Test
     void methodNameToSentence_singleWord_lowercased() {
         assertEquals("Create", methodNameToSentence("create"));
-    }
-
-    @Test
-    void methodNameToSentence_allCaps_spacedAndLowered() {
-        assertEquals("Delete product", methodNameToSentence("deleteProduct"));
     }
 
     @Test

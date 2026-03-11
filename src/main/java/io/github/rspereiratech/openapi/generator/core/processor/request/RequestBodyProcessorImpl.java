@@ -52,17 +52,6 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
     private final String          defaultConsumesMediaType;
 
     /**
-     * Creates a new {@code RequestBodyProcessorImpl} using {@value #FALLBACK_CONSUMES_MEDIA_TYPE}
-     * as the default consumes media type.
-     *
-     * @param schemaProcessor the shared schema processor; must not be {@code null}
-     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
-     */
-    public RequestBodyProcessorImpl(SchemaProcessor schemaProcessor) {
-        this(schemaProcessor, FALLBACK_CONSUMES_MEDIA_TYPE);
-    }
-
-    /**
      * Creates a new {@code RequestBodyProcessorImpl} with a configurable default consumes media type.
      *
      * @param schemaProcessor        the shared schema processor; must not be {@code null}
@@ -145,7 +134,7 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      * Assembles an OpenAPI {@link RequestBody} from the resolved schema.
      *
      * <p>The media type is determined by {@link #resolveConsumes(Method)}, defaulting to
-     * {@value #DEFAULT_MEDIA_TYPE} when no {@code consumes} attribute is declared.</p>
+     * {@value #FALLBACK_CONSUMES_MEDIA_TYPE} when no {@code consumes} attribute is declared.</p>
      *
      * @param schema   the schema describing the body content; must not be {@code null}
      * @param required whether the request body is required

@@ -27,11 +27,25 @@ import java.lang.reflect.Type;
 @SuppressWarnings("java:S1452")
 public class VoidTypeSchemaHandler implements TypeSchemaHandler {
 
+    /**
+     * Returns {@code true} if {@code type} represents a void or {@code Void} type.
+     *
+     * @param type the type to test; must not be {@code null}
+     * @return {@code true} for {@code void} / {@code Void}; {@code false} otherwise
+     */
     @Override
     public boolean supports(Type type) {
         return TypeUtils.isVoid(type);
     }
 
+    /**
+     * Returns {@code null} to signal that no response body schema should be emitted
+     * for {@code void} / {@code Void} return types.
+     *
+     * @param type            the void type (not used in the implementation)
+     * @param schemaProcessor the schema processor (not used in the implementation)
+     * @return {@code null} always
+     */
     @Override
     public Schema<?> resolve(Type type, SchemaProcessor schemaProcessor) {
         return null;

@@ -129,7 +129,7 @@ public class OpenApiGeneratorImpl implements OpenApiGenerator {
         // 4 – Post-process
         factory.createPostProcessors(sp, config.sortOutput()).forEach(p -> p.process(openAPI));
 
-        // 6 – Write output
+        // 5 – Write output
         WriterFactory.create(config).write(openAPI, Path.of(config.outputFile()));
         log.info("Generation complete.");
     }

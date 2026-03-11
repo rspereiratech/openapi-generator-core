@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
 /**
@@ -23,15 +22,13 @@ import java.lang.reflect.Type;
  *
  * @author ruispereira
  */
-public class NotBlankConstraintHandler implements ConstraintHandler {
+public class NotBlankConstraintHandler extends AbstractConstraintHandler<NotBlank> {
+
+    /** Creates a handler for {@link NotBlank}. */
+    public NotBlankConstraintHandler() { super(NotBlank.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof NotBlank;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(NotBlank ann, Type fieldType, Schema<?> property) {
         property.setNullable(false);
         property.setMinLength(1);
     }

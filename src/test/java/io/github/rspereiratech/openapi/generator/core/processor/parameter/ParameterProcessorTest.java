@@ -40,6 +40,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Unit tests for {@link ParameterProcessorImpl}.
+ *
+ * <p>Covers parameter location mapping ({@code path}, {@code query}, {@code header},
+ * {@code cookie}), name resolution from annotation attributes, the {@code required} flag,
+ * exclusion of {@code @RequestBody} and unannotated parameters, Swagger
+ * {@code @Parameter} enrichment and hidden-flag filtering, {@code Pageable} expansion,
+ * default and custom ignored-type lists, and the schema-override behaviour for
+ * otherwise-ignored types annotated with {@code @Parameter(schema=@Schema(...))}.
+ */
 @ExtendWith(MockitoExtension.class)
 class ParameterProcessorTest {
 
@@ -51,7 +61,7 @@ class ParameterProcessorTest {
     @BeforeEach
     void setUp() {
         lenient().when(schemaProcessor.toSchema(any())).thenReturn(new Schema<>());
-        processor = new ParameterProcessorImpl(schemaProcessor);
+        processor = new ParameterProcessorImpl(schemaProcessor, true, Set.of());
     }
 
     // ==========================================================================
@@ -96,6 +106,12 @@ class ParameterProcessorTest {
         public void withLocale(@RequestParam Locale locale) {}
         public void withLocaleAndOther(@RequestParam Locale locale, @RequestParam String status) {}
         public void withCustomIgnoredType(@RequestParam java.util.Currency currency) {}
+        public void withLocaleSchemaOverride(
+                @RequestParam(value = "locale", required = false)
+                @io.swagger.v3.oas.annotations.Parameter(
+                        description = "Locale for filtering (e.g., en_US, pt_BR)",
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", example = "en_US"))
+                Locale locale) {}
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -297,7 +313,7 @@ class ParameterProcessorTest {
     @Test
     void constructor_nullSchemaProcessor_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new ParameterProcessorImpl(null));
+                () -> new ParameterProcessorImpl(null, true, Set.of()));
     }
 
     // ==========================================================================
@@ -350,5 +366,24 @@ class ParameterProcessorTest {
     void constructor_nullAdditionalIgnoredTypes_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
                 () -> new ParameterProcessorImpl(schemaProcessor, true, null));
+    }
+
+    // ==========================================================================
+    // Ignored param type override via @Parameter(schema=...)
+    // ==========================================================================
+
+    @Test
+    void locale_withExplicitSchemaType_isIncludedAsString() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withLocaleSchemaOverride", Locale.class));
+        assertEquals(1, params.size(), "Locale with explicit @Parameter(schema=@Schema(type=\"string\")) must not be ignored");
+        Parameter p = params.get(0);
+        assertAll(
+                () -> assertEquals("locale", p.getName()),
+                () -> assertEquals("query", p.getIn()),
+                () -> assertNotNull(p.getSchema()),
+                () -> assertEquals("string", p.getSchema().getType()),
+                () -> assertEquals("en_US", p.getSchema().getExample()),
+                () -> assertEquals("Locale for filtering (e.g., en_US, pt_BR)", p.getDescription())
+        );
     }
 }

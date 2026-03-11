@@ -26,7 +26,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -146,36 +145,23 @@ public class OperationProcessorImpl implements OperationProcessor {
     /**
      * Applies scalar and collection attributes of a
      * {@code @io.swagger.v3.oas.annotations.Operation} annotation to the given {@link Operation}.
-     * Reflection failures reading {@code tags} or {@code deprecated} are logged at debug level.
      */
     private void applySwaggerOperation(Operation operation, Annotation ann) {
         String summary     = AnnotationAttributeUtils.getStringAttribute(ann, "summary");
         String description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
         String operationId = AnnotationAttributeUtils.getStringAttribute(ann, "operationId");
         boolean hidden     = AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false);
+        boolean deprecated = AnnotationAttributeUtils.getBooleanAttribute(ann, "deprecated", false);
 
         if (!summary.isBlank())     operation.setSummary(summary);
         if (!description.isBlank()) operation.setDescription(description);
         if (!operationId.isBlank()) operation.setOperationId(operationId);
         if (hidden)                 operation.addExtension("x-hidden", true);
+        if (deprecated)             operation.setDeprecated(true);
 
-        Class<? extends Annotation> type = ann.annotationType();
-
-        try {
-            String[] opTags = (String[]) type.getDeclaredMethod("tags").invoke(ann);
-            if (opTags != null) Arrays.stream(opTags)
-                    .filter(t -> !t.isBlank())
-                    .forEach(operation::addTagsItem);
-        } catch (Exception e) {
-            log.warn("Could not read 'tags' from @Operation: {}", e.getMessage());
-        }
-
-        try {
-            boolean deprecated = (boolean) type.getDeclaredMethod("deprecated").invoke(ann);
-            if (deprecated) operation.setDeprecated(true);
-        } catch (Exception e) {
-            log.warn("Could not read 'deprecated' from @Operation: {}", e.getMessage());
-        }
+        AnnotationAttributeUtils.getStringArrayValue(ann, "tags").stream()
+                .filter(t -> !t.isBlank())
+                .forEach(operation::addTagsItem);
     }
 
     // ------------------------------------------------------------------

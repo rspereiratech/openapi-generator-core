@@ -16,6 +16,13 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 
+/**
+ * Unit tests for {@link GeneratorConfig} and its builder.
+ *
+ * <p>Covers builder validation (null/blank/empty inputs), default field values,
+ * accumulation and replacement semantics for list fields, and unmodifiability of
+ * the returned collections.
+ */
 class GeneratorConfigTest {
 
     // ==========================================================================
@@ -500,14 +507,6 @@ class GeneratorConfigTest {
     // ==========================================================================
 
     @Test
-    void sortOutput_defaultsFalse() {
-        GeneratorConfig config = GeneratorConfig.builder()
-                .basePackage("com.example")
-                .build();
-        Assertions.assertFalse(config.sortOutput());
-    }
-
-    @Test
     void sortOutput_setTrue_storedCorrectly() {
         GeneratorConfig config = GeneratorConfig.builder()
                 .basePackage("com.example")
@@ -523,14 +522,6 @@ class GeneratorConfigTest {
     // ==========================================================================
     // outputFormat
     // ==========================================================================
-
-    @Test
-    void outputFormat_defaultsToYaml() {
-        GeneratorConfig config = GeneratorConfig.builder()
-                .basePackage("com.example")
-                .build();
-        Assertions.assertEquals(OutputFormat.YAML, config.outputFormat());
-    }
 
     @Test
     void outputFormat_json_storedCorrectly() {

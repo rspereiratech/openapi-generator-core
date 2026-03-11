@@ -10,6 +10,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+- `AbstractConstraintHandler<A extends Annotation>` — generic base class for all `ConstraintHandler` implementations; provides a type-safe `supports()` check and encapsulates the unsafe annotation cast, eliminating the same boilerplate from all 14 concrete handlers
+- `ParameterProcessorImpl`: parameters of an ignored type (e.g. `Locale`) are now included in the spec when the method carries `@Parameter(schema = @Schema(type = "…"))` — the explicit schema annotation overrides the ignore list
+- `DefaultHttpStatusResolver`: status code `"default"` now resolves to the description `"default response"` instead of falling through to the `"Response"` fallback
+
+### Fixed
+
+- `ResponseProcessorImpl`: PUT and PATCH operations now correctly process explicit `@ApiResponse` annotations; previously a special case bypassed `processExplicitApiResponses()` for these HTTP methods
+- `ResponseProcessorImpl`: blank `description` in an `@ApiResponse` annotation now falls back to the status-resolver description instead of emitting an empty string
+- `DefaultHttpStatusResolver`: `"default"` is no longer incorrectly parsed as an integer, which previously caused a `NumberFormatException` and returned the generic `"Response"` fallback
+
+### Changed
+
+- All 14 `ConstraintHandler` implementations now extend `AbstractConstraintHandler<A>` — the redundant `supports()` override and unsafe `(A)` cast have been removed from every handler
+- `AnnotationAttributeUtils`: internal reflection try-catch-log pattern extracted to the private `invokeAttribute()` helper; all six public read methods now delegate to it
+- `ResponseProcessorImpl`: duplicated schema-hint reading logic extracted to a `SchemaComposition` private record and `readSchemaComposition()` static method
+- `OperationProcessorImpl`: `applySwaggerOperation()` now uses `AnnotationAttributeUtils` helpers (`getStringArrayValue`, `getBooleanAttribute`) instead of inline raw reflection
+- `ProcessorFactory`: removed three single-arg convenience overloads (`createParameterProcessor(SchemaProcessor)`, `createRequestBodyProcessor(SchemaProcessor)`, `createResponseProcessor(SchemaProcessor)`) — callers use the full-signature abstracts directly
+- `ParameterProcessor`: removed 2-arg `processParameters(Method, Map)` middle overload; the 1-arg default delegates straight to the 3-arg signature
+- `OperationProcessor`: removed 4-arg `buildOperation` middle overload; the 3-arg default delegates straight to the 5-arg signature
+- `ClasspathScanner`: removed 2-arg `scan(List, ClassLoader)` convenience default; only the 3-arg abstract remains
+- `ParameterProcessorImpl`, `RequestBodyProcessorImpl`, `ResponseProcessorImpl`: removed 1-arg convenience constructors; only the full-signature constructors remain
+- `SortSpecPostProcessor`: replaced `Collections.sort(list)` with `list.sort(null)`; removed unused `java.util.Collections` import
+- `PruneUnreferencedSchemasPostProcessor`: `Collectors.toSet()` replaced with `Collectors.toUnmodifiableSet()`
+
+### Added
+
 - `ValidationSchemaEnricher` (Chain of Responsibility) — propagates Jakarta Bean Validation constraints to OpenAPI schema properties after `ModelConverters` resolution; replaces the former static utility `BeanValidationConstraintApplier`
 - `ConstraintHandler` interface — strategy element in the constraint enrichment chain; each implementation maps one Jakarta Bean Validation annotation to its OpenAPI schema equivalent
 - Built-in `ConstraintHandler` implementations under `processor/schema/constraints/`: `MinConstraintHandler`, `MaxConstraintHandler`, `DecimalMinConstraintHandler`, `DecimalMaxConstraintHandler`, `PositiveConstraintHandler`, `PositiveOrZeroConstraintHandler`, `NegativeConstraintHandler`, `NegativeOrZeroConstraintHandler`, `SizeConstraintHandler`, `NotNullConstraintHandler`, `NotBlankConstraintHandler`, `NotEmptyConstraintHandler`, `PatternConstraintHandler`, `EmailConstraintHandler`

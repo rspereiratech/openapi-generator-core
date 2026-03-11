@@ -42,6 +42,18 @@ import java.util.Objects;
  */
 public class DefaultHttpStatusResolver implements HttpStatusResolver {
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Resolution order:
+     * <ol>
+     *   <li>{@code @ResponseStatus} annotation on the method (or any annotation
+     *       meta-annotated with {@code @ResponseStatus}).</li>
+     *   <li>POST → 201 Created.</li>
+     *   <li>Void return type → 204 No Content.</li>
+     *   <li>Fallback → 200 OK.</li>
+     * </ol>
+     */
     @Override
     public String resolveCode(Method method, String httpMethod, Type returnType) {
         Preconditions.checkNotNull(method, "'method' must not be null");
@@ -68,8 +80,16 @@ public class DefaultHttpStatusResolver implements HttpStatusResolver {
         return String.valueOf(HttpStatus.OK.value());
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The literal {@code "default"} maps to {@code "default response"}.
+     * All other values are resolved via {@link HttpStatus#resolve(int)};
+     * unrecognised or non-numeric values fall back to {@code "Response"}.</p>
+     */
     @Override
     public String describeCode(String statusCode) {
+        if ("default".equals(statusCode)) return "default response";
         try {
             HttpStatus status = HttpStatus.resolve(Integer.parseInt(statusCode));
             return status != null ? status.getReasonPhrase() : "Response";
@@ -79,7 +99,16 @@ public class DefaultHttpStatusResolver implements HttpStatusResolver {
     }
 
     /**
-     * Extracts the HTTP status code from a @ResponseStatus annotation, if present.
+     * Searches the method's annotation hierarchy for a {@link ResponseStatus} annotation
+     * and returns the declared HTTP status code as a string.
+     *
+     * <p>Both the {@code value} and {@code code} attributes are checked; {@code value}
+     * takes precedence unless it equals {@link HttpStatus#INTERNAL_SERVER_ERROR} (the
+     * Spring default placeholder), in which case {@code code} is used instead.</p>
+     *
+     * @param method the controller method to inspect; must not be {@code null}
+     * @return the status code as a decimal string, or {@code null} if no
+     *         {@link ResponseStatus} annotation is found
      */
     private String extractStatusFromAnnotation(Method method) {
         for (Annotation annotation : AnnotationUtils.getAllAnnotations(method)) {

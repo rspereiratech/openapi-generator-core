@@ -31,12 +31,26 @@ public class SchemaRegistryMergePostProcessor implements PostProcessor {
     private final SchemaProcessor schemaProcessor;
 
     /**
-     * @param schemaProcessor the processor whose registry will be merged; must not be {@code null}
+     * Creates a new post-processor backed by the given schema processor.
+     *
+     * @param schemaProcessor the processor whose registry will be merged into the OpenAPI model;
+     *                        must not be {@code null}
+     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
      */
     public SchemaRegistryMergePostProcessor(SchemaProcessor schemaProcessor) {
         this.schemaProcessor = schemaProcessor;
     }
 
+    /**
+     * Copies every schema from the {@link SchemaProcessor} registry into
+     * {@code openAPI.components.schemas}, creating the {@code Components} section
+     * if it does not yet exist.
+     *
+     * <p>This method is a no-op when the registry is empty.</p>
+     *
+     * @param openAPI the OpenAPI model to enrich in-place; must not be {@code null}
+     * @throws NullPointerException if {@code openAPI} is {@code null}
+     */
     @Override
     public void process(OpenAPI openAPI) {
         Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");

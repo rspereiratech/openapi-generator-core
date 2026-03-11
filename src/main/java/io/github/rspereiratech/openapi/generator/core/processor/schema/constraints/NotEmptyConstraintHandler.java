@@ -14,7 +14,6 @@ import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
 /**
@@ -29,15 +28,13 @@ import java.lang.reflect.Type;
  *
  * @author ruispereira
  */
-public class NotEmptyConstraintHandler implements ConstraintHandler {
+public class NotEmptyConstraintHandler extends AbstractConstraintHandler<NotEmpty> {
+
+    /** Creates a handler for {@link NotEmpty}. */
+    public NotEmptyConstraintHandler() { super(NotEmpty.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof NotEmpty;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(NotEmpty ann, Type fieldType, Schema<?> property) {
         property.setNullable(false);
         boolean multiValued = TypeUtils.isCollection(fieldType)
                 || TypeUtils.isMap(fieldType)

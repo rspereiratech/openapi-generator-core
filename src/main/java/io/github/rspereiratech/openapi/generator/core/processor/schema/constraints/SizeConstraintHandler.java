@@ -14,7 +14,6 @@ import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Size;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
 
@@ -35,16 +34,13 @@ import java.util.function.Consumer;
  *
  * @author ruispereira
  */
-public class SizeConstraintHandler implements ConstraintHandler {
+public class SizeConstraintHandler extends AbstractConstraintHandler<Size> {
+
+    /** Creates a handler for {@link Size}. */
+    public SizeConstraintHandler() { super(Size.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Size;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
-        Size size = (Size) annotation;
+    protected void applyTyped(Size ann, Type fieldType, Schema<?> property) {
         boolean multiValued = TypeUtils.isCollection(fieldType)
                 || TypeUtils.isMap(fieldType)
                 || TypeUtils.isArray(fieldType);
@@ -52,7 +48,7 @@ public class SizeConstraintHandler implements ConstraintHandler {
         Consumer<Integer> setMin = multiValued ? property::setMinItems : property::setMinLength;
         Consumer<Integer> setMax = multiValued ? property::setMaxItems : property::setMaxLength;
 
-        if (size.min() > 0)                setMin.accept(size.min());
-        if (size.max() < Integer.MAX_VALUE) setMax.accept(size.max());
+        if (ann.min() > 0)                setMin.accept(ann.min());
+        if (ann.max() < Integer.MAX_VALUE) setMax.accept(ann.max());
     }
 }

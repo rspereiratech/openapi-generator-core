@@ -12,6 +12,8 @@ package io.github.rspereiratech.openapi.generator.core.processor.response.resolv
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -20,6 +22,15 @@ import java.lang.reflect.Method;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Unit tests for {@link DefaultHttpStatusResolver}.
+ *
+ * <p>Verifies {@link DefaultHttpStatusResolver#resolveCode} precondition enforcement,
+ * default status-code inference rules (GET/PUT/PATCH/DELETE→200, POST→201, void→204),
+ * {@code @ResponseStatus} override via both {@code value} and {@code code} attributes,
+ * and {@link DefaultHttpStatusResolver#describeCode} delegation to
+ * {@link org.springframework.http.HttpStatus#getReasonPhrase()}.
+ */
 class DefaultHttpStatusResolverTest {
 
     private HttpStatusResolver resolver;
@@ -155,26 +166,29 @@ class DefaultHttpStatusResolverTest {
     // describeCode — delegates to HttpStatus.getReasonPhrase()
     // ==========================================================================
 
-    // Common codes previously covered by the static map
-    @Test void describeCode_200_returnsOk()                   { assertEquals("OK",                     resolver.describeCode("200")); }
-    @Test void describeCode_201_returnsCreated()               { assertEquals("Created",                resolver.describeCode("201")); }
-    @Test void describeCode_204_returnsNoContent()             { assertEquals("No Content",             resolver.describeCode("204")); }
-    @Test void describeCode_400_returnsBadRequest()            { assertEquals("Bad Request",            resolver.describeCode("400")); }
-    @Test void describeCode_401_returnsUnauthorized()          { assertEquals("Unauthorized",           resolver.describeCode("401")); }
-    @Test void describeCode_403_returnsForbidden()             { assertEquals("Forbidden",              resolver.describeCode("403")); }
-    @Test void describeCode_404_returnsNotFound()              { assertEquals("Not Found",              resolver.describeCode("404")); }
-    @Test void describeCode_500_returnsInternalServerError()   { assertEquals("Internal Server Error",  resolver.describeCode("500")); }
+    @ParameterizedTest(name = "describeCode({0}) = {1}")
+    @CsvSource({
+            "200, OK",
+            "201, Created",
+            "204, No Content",
+            "301, Moved Permanently",
+            "302, Found",
+            "304, Not Modified",
+            "400, Bad Request",
+            "401, Unauthorized",
+            "403, Forbidden",
+            "404, Not Found",
+            "409, Conflict",
+            "422, Unprocessable Entity",
+            "429, Too Many Requests",
+            "500, Internal Server Error",
+            "503, Service Unavailable",
+            "default, default response"
+    })
+    void describeCode_knownCodes_returnExpectedPhrase(String code, String expected) {
+        assertEquals(expected, resolver.describeCode(code));
+    }
 
-    // Codes that the old static map did NOT cover — now resolved via HttpStatus
-    @Test void describeCode_301_returnsMovedPermanently()      { assertEquals("Moved Permanently",      resolver.describeCode("301")); }
-    @Test void describeCode_302_returnsFound()                 { assertEquals("Found",                  resolver.describeCode("302")); }
-    @Test void describeCode_304_returnsNotModified()           { assertEquals("Not Modified",           resolver.describeCode("304")); }
-    @Test void describeCode_409_returnsConflict()              { assertEquals("Conflict",               resolver.describeCode("409")); }
-    @Test void describeCode_422_returnsUnprocessableEntity()   { assertEquals("Unprocessable Entity",   resolver.describeCode("422")); }
-    @Test void describeCode_429_returnsTooManyRequests()       { assertEquals("Too Many Requests",      resolver.describeCode("429")); }
-    @Test void describeCode_503_returnsServiceUnavailable()    { assertEquals("Service Unavailable",    resolver.describeCode("503")); }
-
-    // Codes unknown to Spring's HttpStatus fall back to "Response"
     @Test
     void describeCode_unknown_returnsResponse() {
         assertEquals("Response", resolver.describeCode("999"),

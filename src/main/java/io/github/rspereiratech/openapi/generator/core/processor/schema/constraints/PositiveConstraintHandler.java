@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Positive;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -24,15 +23,13 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class PositiveConstraintHandler implements ConstraintHandler {
+public class PositiveConstraintHandler extends AbstractConstraintHandler<Positive> {
+
+    /** Creates a handler for {@link Positive}. */
+    public PositiveConstraintHandler() { super(Positive.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Positive;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(Positive ann, Type fieldType, Schema<?> property) {
         property.setMinimum(BigDecimal.ZERO);
         property.setExclusiveMinimum(true);
     }

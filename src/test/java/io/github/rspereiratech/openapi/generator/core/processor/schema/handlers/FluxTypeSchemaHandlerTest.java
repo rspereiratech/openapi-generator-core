@@ -30,6 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * Unit tests for {@link FluxTypeSchemaHandler}.
+ *
+ * <p>Verifies that {@code Flux<T>} types are correctly unwrapped to an {@code array}
+ * schema whose {@code items} reference the resolved schema for {@code T}, and that
+ * non-{@code Flux} types are not handled by this handler.
+ */
 @ExtendWith(MockitoExtension.class)
 class FluxTypeSchemaHandlerTest {
 

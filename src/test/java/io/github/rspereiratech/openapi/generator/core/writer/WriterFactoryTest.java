@@ -18,6 +18,13 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
+/**
+ * Unit tests for {@link io.github.rspereiratech.openapi.generator.core.writer.WriterFactory}.
+ *
+ * <p>Verifies that the factory returns the correct {@link io.github.rspereiratech.openapi.generator.core.writer.OpenApiWriter}
+ * implementation for each {@link io.github.rspereiratech.openapi.generator.core.config.OutputFormat},
+ * and that each call produces a new instance.
+ */
 class WriterFactoryTest {
 
     private static GeneratorConfig config(OutputFormat format, boolean prettyPrint) {

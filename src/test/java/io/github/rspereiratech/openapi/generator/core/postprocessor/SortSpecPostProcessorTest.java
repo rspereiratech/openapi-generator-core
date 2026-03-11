@@ -24,6 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Unit tests for {@link SortSpecPostProcessor}.
+ *
+ * <p>Verifies that paths and response-code keys are sorted alphabetically when
+ * the processor is enabled, and that the model is left unchanged when disabled.
+ */
 class SortSpecPostProcessorTest {
 
     private final SortSpecPostProcessor enabled  = new SortSpecPostProcessor(true);

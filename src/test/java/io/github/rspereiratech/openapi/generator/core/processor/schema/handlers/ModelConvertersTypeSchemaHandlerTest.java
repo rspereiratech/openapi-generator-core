@@ -32,6 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * Unit tests for {@link ModelConvertersTypeSchemaHandler}.
+ *
+ * <p>Verifies catch-all schema resolution via Jackson {@code ModelConverters},
+ * {@link io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher}
+ * integration for propagating Bean Validation constraints, and schema registration
+ * in the component registry.
+ */
 @ExtendWith(MockitoExtension.class)
 class ModelConvertersTypeSchemaHandlerTest {
 

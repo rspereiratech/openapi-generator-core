@@ -85,18 +85,24 @@ public class MyPostProcessor implements PostProcessor {
 
 ### Register the post-processor
 
-Extend `OpenApiGeneratorImpl` or pass the post-processor list directly if the implementation supports it:
+Extend `DefaultProcessorFactory` and override `createPostProcessors()` to append your processor after the built-in ones:
 
 ```java
-public class MyOpenApiGeneratorImpl extends OpenApiGeneratorImpl {
+public class MyProcessorFactory extends DefaultProcessorFactory {
 
     @Override
-    protected List<PostProcessor> postProcessors(OpenAPI openAPI, Map<String, Schema> schemaRegistry) {
-        List<PostProcessor> processors = new ArrayList<>(super.postProcessors(openAPI, schemaRegistry));
+    public List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor, boolean sortOutput) {
+        List<PostProcessor> processors = new ArrayList<>(super.createPostProcessors(schemaProcessor, sortOutput));
         processors.add(new MyPostProcessor());
         return processors;
     }
 }
+```
+
+Pass your factory when constructing the generator:
+
+```java
+new OpenApiGeneratorImpl(new MyProcessorFactory()).generate(config, classLoader);
 ```
 
 ---
@@ -119,7 +125,7 @@ If your annotation **does** transitively meta-annotate `@RestController` (via co
 
 ---
 
-## 5. Custom Constraint Handler
+## 4. Custom Constraint Handler
 
 `ValidationSchemaEnricher` uses a chain of `ConstraintHandler`s to map Jakarta Bean Validation annotations to OpenAPI schema properties. Add a custom handler to support annotations not covered by the default chain — for example, Hibernate Validator's `@Length`.
 
@@ -144,12 +150,26 @@ public class LengthConstraintHandler implements ConstraintHandler {
 
 ### Wire into the enricher
 
-Build a list that combines the built-in handlers with your custom one and pass it to `ValidationSchemaEnricher`:
+Build a list that includes the standard handlers plus your custom one, and pass it to `ValidationSchemaEnricher`. The standard handlers must be listed explicitly — there is no static convenience factory:
 
 ```java
-List<ConstraintHandler> handlers = new ArrayList<>();
-handlers.addAll(ValidationSchemaEnricher.defaultHandlers()); // convenience method
-handlers.add(new LengthConstraintHandler());
+List<ConstraintHandler> handlers = new ArrayList<>(List.of(
+    new MinConstraintHandler(),
+    new MaxConstraintHandler(),
+    new DecimalMinConstraintHandler(),
+    new DecimalMaxConstraintHandler(),
+    new PositiveConstraintHandler(),
+    new PositiveOrZeroConstraintHandler(),
+    new NegativeConstraintHandler(),
+    new NegativeOrZeroConstraintHandler(),
+    new SizeConstraintHandler(),
+    new NotNullConstraintHandler(),
+    new NotBlankConstraintHandler(),
+    new NotEmptyConstraintHandler(),
+    new PatternConstraintHandler(),
+    new EmailConstraintHandler(),
+    new LengthConstraintHandler()   // custom
+));
 
 ValidationSchemaEnricher enricher = new ValidationSchemaEnricher(handlers);
 ```
@@ -175,7 +195,7 @@ public class MyProcessorFactory extends DefaultProcessorFactory {
 
 ---
 
-## 4. Custom HTTP Status Resolver
+## 5. Custom HTTP Status Resolver
 
 The `DefaultHttpStatusResolver` resolves HTTP status codes from `@ResponseStatus` or HTTP method defaults. To change this behaviour, implement `HttpStatusResolver`:
 
@@ -183,10 +203,15 @@ The `DefaultHttpStatusResolver` resolves HTTP status codes from `@ResponseStatus
 public class MyHttpStatusResolver implements HttpStatusResolver {
 
     @Override
-    public String resolve(Method method, String httpMethod) {
+    public String resolveCode(Method method, String httpMethod, Type returnType) {
         // Custom logic — e.g. always use 200 for GET regardless of @ResponseStatus
         if ("GET".equals(httpMethod)) return "200";
-        return new DefaultHttpStatusResolver().resolve(method, httpMethod);
+        return new DefaultHttpStatusResolver().resolveCode(method, httpMethod, returnType);
+    }
+
+    @Override
+    public String describeCode(String statusCode) {
+        return new DefaultHttpStatusResolver().describeCode(statusCode);
     }
 }
 ```

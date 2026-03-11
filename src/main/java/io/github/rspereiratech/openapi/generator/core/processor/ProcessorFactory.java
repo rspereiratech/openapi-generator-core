@@ -56,16 +56,6 @@ public interface ProcessorFactory {
     SchemaProcessor createSchemaProcessor();
 
     /**
-     * Creates the parameter processor with default ignored types enabled and no additional ones.
-     *
-     * @param schemaProcessor the shared schema processor created by {@link #createSchemaProcessor()}
-     * @return a new {@link ParameterProcessor} instance
-     */
-    default ParameterProcessor createParameterProcessor(SchemaProcessor schemaProcessor) {
-        return createParameterProcessor(schemaProcessor, true, Set.of());
-    }
-
-    /**
      * Creates the parameter processor with explicit control over which parameter types are ignored.
      *
      * @param schemaProcessor         the shared schema processor
@@ -78,17 +68,6 @@ public interface ProcessorFactory {
                                                  Set<String> additionalIgnoredTypes);
 
     /**
-     * Creates the request-body processor using the default consumes media type
-     * ({@code application/json}).
-     *
-     * @param schemaProcessor the shared schema processor
-     * @return a new {@link RequestBodyProcessor} instance
-     */
-    default RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor) {
-        return createRequestBodyProcessor(schemaProcessor, "application/json");
-    }
-
-    /**
      * Creates the request-body processor with a configurable default consumes media type.
      *
      * @param schemaProcessor          the shared schema processor
@@ -97,16 +76,6 @@ public interface ProcessorFactory {
      */
     RequestBodyProcessor createRequestBodyProcessor(SchemaProcessor schemaProcessor,
                                                      String defaultConsumesMediaType);
-
-    /**
-     * Creates the response processor using the default produces media type ({@code *}{@code /*}).
-     *
-     * @param schemaProcessor the shared schema processor
-     * @return a new {@link ResponseProcessor} instance
-     */
-    default ResponseProcessor createResponseProcessor(SchemaProcessor schemaProcessor) {
-        return createResponseProcessor(schemaProcessor, "*/*");
-    }
 
     /**
      * Creates the response processor with a configurable default produces media type.

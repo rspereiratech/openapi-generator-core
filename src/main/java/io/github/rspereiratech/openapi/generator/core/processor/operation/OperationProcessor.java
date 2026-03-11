@@ -45,7 +45,7 @@ public interface OperationProcessor {
     /**
      * Builds an {@link Operation} object from a controller method.
      *
-     * <p>Delegates to {@link #buildOperation(Method, String, List, Map)} with an empty type-variable map.</p>
+     * <p>Delegates to the full overload with empty type-variable map and no mapping headers.</p>
      *
      * @param method     the controller method to process; must not be {@code null}
      * @param httpMethod the uppercase HTTP verb resolved by the caller (e.g. {@code "GET"})
@@ -53,32 +53,12 @@ public interface OperationProcessor {
      * @return the populated {@link Operation} representing the controller method
      */
     default Operation buildOperation(Method method, String httpMethod, Collection<String> tags) {
-        return buildOperation(method, httpMethod, tags, Map.of());
+        return buildOperation(method, httpMethod, tags, Map.of(), List.of());
     }
 
     /**
-     * Variant that also accepts a type-variable map for resolving generic type parameters
-     * (e.g. {@code T} in {@code ResponseEntity<T>}) to their concrete types before schema generation.
-     *
-     * <p>Delegates to {@link #buildOperation(Method, String, Collection, Map, List)} with empty mapping headers.</p>
-     *
-     * @param method     the controller method to process; must not be {@code null}
-     * @param httpMethod the uppercase HTTP verb (e.g. {@code "POST"})
-     * @param tags       tags inherited from the owning controller; may be empty
-     * @param typeVarMap mapping of type variables to concrete types; may be empty
-     * @return the populated {@link Operation} representing the controller method
-     */
-    default Operation buildOperation(Method method, String httpMethod, Collection<String> tags,
-                                     Map<TypeVariable<?>, Type> typeVarMap) {
-        return buildOperation(method, httpMethod, tags, typeVarMap, List.of());
-    }
-
-    /**
-     * Variant that also accepts header expressions from the Spring MVC mapping annotation's
-     * {@code headers} attribute (e.g. {@code @PostMapping(headers = "x-dashboard-name=pcs")}).
-     *
-     * <p>Header expressions are forwarded to the parameter processor to generate
-     * additional {@code in: header} parameters in the OpenAPI operation.</p>
+     * Builds an {@link Operation} from a controller method, with header expressions from the
+     * Spring MVC mapping annotation's {@code headers} attribute forwarded to the parameter processor.
      *
      * @param method         the controller method to process; must not be {@code null}
      * @param httpMethod     the uppercase HTTP verb (e.g. {@code "POST"})

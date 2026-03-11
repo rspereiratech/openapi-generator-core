@@ -19,6 +19,15 @@ import com.google.common.base.Preconditions;
  */
 public record ServerConfig(String url, String description) {
 
+    /**
+     * Compact canonical constructor that validates and normalises the record components.
+     *
+     * <p>{@code url} must be non-null and non-blank. {@code description} is normalised
+     * to an empty string when {@code null} is supplied.</p>
+     *
+     * @throws NullPointerException     if {@code url} is {@code null}
+     * @throws IllegalArgumentException if {@code url} is blank
+     */
     public ServerConfig {
         Preconditions.checkNotNull(url, "Server url must not be null");
         Preconditions.checkArgument(!url.isBlank(), "Server url must not be blank");

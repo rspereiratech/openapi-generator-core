@@ -15,8 +15,6 @@ import io.github.rspereiratech.openapi.generator.core.processor.response.resolve
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeUtils;
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -68,18 +66,8 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private final String             defaultProducesMediaType;
 
     /**
-     * Creates a new {@code ResponseProcessorImpl} using {@value #FALLBACK_PRODUCES_MEDIA_TYPE}
-     * as the default produces media type and the default {@link DefaultHttpStatusResolver}.
-     *
-     * @param schemaProcessor the shared schema processor; must not be {@code null}
-     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
-     */
-    public ResponseProcessorImpl(SchemaProcessor schemaProcessor) {
-        this(schemaProcessor, FALLBACK_PRODUCES_MEDIA_TYPE, new DefaultHttpStatusResolver());
-    }
-
-    /**
-     * Creates an instance with a configurable default produces media type.
+     * Creates an instance with a configurable default produces media type and the default
+     * {@link DefaultHttpStatusResolver}.
      *
      * @param schemaProcessor        the shared schema processor; must not be {@code null}
      * @param defaultProducesMediaType the default media type when no {@code produces} is declared;
@@ -117,13 +105,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
 
         ApiResponses responses = new ApiResponses();
 
-        // PUT and PATCH: SpringDoc does not inherit @ApiResponse from interfaces for these
-        // methods — it falls back to the return type, producing only "200 OK".
-        boolean hasExplicit = false;
-        if (!HttpMethod.PUT.matches(httpMethod) && !HttpMethod.PATCH.matches(httpMethod)) {
-            hasExplicit = processExplicitApiResponses(method, responses, typeVarMap);
-        }
-
+        boolean hasExplicit = processExplicitApiResponses(method, responses, typeVarMap);
         if (!hasExplicit) {
             buildDefaultResponse(method, httpMethod, responses, typeVarMap);
         }
@@ -185,11 +167,12 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private void addSwaggerApiResponse(Annotation ann, Method method, ApiResponses responses,
                                         Map<TypeVariable<?>, Type> typeVarMap) {
         String responseCode = AnnotationAttributeUtils.getStringAttribute(ann, "responseCode");
-        if (responseCode.isBlank() || "default".equals(responseCode))
-            responseCode = String.valueOf(HttpStatus.OK.value());
+        if (responseCode.isBlank()) responseCode = "default";
 
-        ApiResponse response = new ApiResponse()
-                .description(AnnotationAttributeUtils.getStringAttribute(ann, "description"));
+        String description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
+        if (description.isBlank()) description = statusResolver.describeCode(responseCode);
+
+        ApiResponse response = new ApiResponse().description(description);
 
         Optional.ofNullable(resolveContent(ann, method, typeVarMap))
                 .ifPresent(response::setContent);
@@ -269,42 +252,35 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     @SuppressWarnings("java:S1168")
     private Schema<?> composedSchemaFromAnnotation(Annotation contentAnn) {
         return AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
-                .map(schemaAnn -> {
-                    try {
-                        Class<?>[] oneOf = (Class<?>[]) schemaAnn.annotationType().getMethod("oneOf").invoke(schemaAnn);
-                        Class<?>[] allOf = (Class<?>[]) schemaAnn.annotationType().getMethod("allOf").invoke(schemaAnn);
-                        Class<?>[] anyOf = (Class<?>[]) schemaAnn.annotationType().getMethod("anyOf").invoke(schemaAnn);
-                        String     type  = (String)    schemaAnn.annotationType().getMethod("type").invoke(schemaAnn);
+                .flatMap(ResponseProcessorImpl::readSchemaComposition)
+                .map(sc -> {
+                    List<Schema<?>> oneOfSchemas = toSchemaList(sc.oneOf());
+                    List<Schema<?>> allOfSchemas = toSchemaList(sc.allOf());
+                    List<Schema<?>> anyOfSchemas = toSchemaList(sc.anyOf());
+                    String       type         = sc.type();
 
-                        List<Schema> oneOfSchemas = toSchemaList(oneOf);
-                        List<Schema> allOfSchemas = toSchemaList(allOf);
-                        List<Schema> anyOfSchemas = toSchemaList(anyOf);
-
-                        if (oneOfSchemas.isEmpty() && allOfSchemas.isEmpty()
-                                && anyOfSchemas.isEmpty() && type.isBlank()) {
-                            return null;
-                        }
-
-                        Schema<?> composed = new Schema<>();
-                        if (!oneOfSchemas.isEmpty()) composed.setOneOf(oneOfSchemas);
-                        if (!allOfSchemas.isEmpty()) composed.setAllOf(allOfSchemas);
-                        if (!anyOfSchemas.isEmpty()) composed.setAnyOf(anyOfSchemas);
-                        if (!type.isBlank())         composed.setType(type);
-                        return composed;
-                    } catch (Exception e) {
-                        return null;
+                    if (oneOfSchemas.isEmpty() && allOfSchemas.isEmpty()
+                            && anyOfSchemas.isEmpty() && type.isBlank()) {
+                        return (Schema<?>) null;
                     }
+
+                    @SuppressWarnings({"unchecked", "rawtypes"})
+                    Schema<?> composed = new Schema<>();
+                    if (!oneOfSchemas.isEmpty()) composed.setOneOf((List) oneOfSchemas);
+                    if (!allOfSchemas.isEmpty()) composed.setAllOf((List) allOfSchemas);
+                    if (!anyOfSchemas.isEmpty()) composed.setAnyOf((List) anyOfSchemas);
+                    if (!type.isBlank())         composed.setType(type);
+                    return composed;
                 })
                 .orElse(null);
     }
 
     /** Maps an array of classes to resolved {@link Schema} objects, skipping {@link Void} and nulls. */
-    private List<Schema> toSchemaList(Class<?>[] classes) {
+    private List<Schema<?>> toSchemaList(Class<?>[] classes) {
         return Arrays.stream(classes)
                 .filter(c -> c != Void.class)
                 .map(schemaProcessor::toSchema)
                 .filter(Objects::nonNull)
-                .map(s -> (Schema) s)
                 .toList();
     }
 
@@ -318,19 +294,45 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      */
     private boolean hasSchemaHints(Annotation contentAnn) {
         return AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
-                .map(schemaAnn -> {
-                    try {
-                        Class<?>[] oneOf = (Class<?>[]) schemaAnn.annotationType().getMethod("oneOf").invoke(schemaAnn);
-                        Class<?>[] allOf = (Class<?>[]) schemaAnn.annotationType().getMethod("allOf").invoke(schemaAnn);
-                        Class<?>[] anyOf = (Class<?>[]) schemaAnn.annotationType().getMethod("anyOf").invoke(schemaAnn);
-                        String     type  = (String)    schemaAnn.annotationType().getMethod("type").invoke(schemaAnn);
-                        return oneOf.length > 0 || allOf.length > 0 || anyOf.length > 0 || !type.isBlank();
-                    } catch (Exception e) {
-                        return false;
-                    }
-                })
+                .flatMap(ResponseProcessorImpl::readSchemaComposition)
+                .map(sc -> sc.oneOf().length > 0 || sc.allOf().length > 0
+                        || sc.anyOf().length > 0 || !sc.type().isBlank())
                 .orElse(false);
     }
+
+    /**
+     * Reads the composition attributes ({@code oneOf}, {@code allOf}, {@code anyOf}, {@code type})
+     * from a Swagger {@code @Schema} annotation via reflection.
+     *
+     * <p>Returns {@link Optional#empty()} if any reflection step fails (e.g. the annotation type
+     * does not declare the expected attributes).</p>
+     *
+     * @param schemaAnn a Swagger {@code @Schema} annotation instance; must not be {@code null}
+     * @return the composition attributes, or empty if unreadable
+     */
+    private static Optional<SchemaComposition> readSchemaComposition(Annotation schemaAnn) {
+        try {
+            Class<?>[] oneOf = (Class<?>[]) schemaAnn.annotationType().getMethod("oneOf").invoke(schemaAnn);
+            Class<?>[] allOf = (Class<?>[]) schemaAnn.annotationType().getMethod("allOf").invoke(schemaAnn);
+            Class<?>[] anyOf = (Class<?>[]) schemaAnn.annotationType().getMethod("anyOf").invoke(schemaAnn);
+            String     type  = (String)    schemaAnn.annotationType().getMethod("type").invoke(schemaAnn);
+            return Optional.of(new SchemaComposition(oneOf, allOf, anyOf, type));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Holds the composition-related attributes of a Swagger {@code @Schema} annotation,
+     * read once and shared between {@link #composedSchemaFromAnnotation} and
+     * {@link #hasSchemaHints}.
+     *
+     * @param oneOf the classes listed in {@code @Schema(oneOf = {...})}
+     * @param allOf the classes listed in {@code @Schema(allOf = {...})}
+     * @param anyOf the classes listed in {@code @Schema(anyOf = {...})}
+     * @param type  the {@code type} string (e.g. {@code "object"}, {@code "string"})
+     */
+    private record SchemaComposition(Class<?>[] oneOf, Class<?>[] allOf, Class<?>[] anyOf, String type) {}
 
     /**
      * Reads the {@code array} attribute from a Swagger {@code @Content} annotation and

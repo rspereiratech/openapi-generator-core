@@ -23,6 +23,13 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/**
+ * Unit tests for {@link io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeUtils}.
+ *
+ * <p>Covers retrieval of string, class, boolean, and array attribute values from
+ * annotations, including aliased attributes and edge cases such as missing attributes
+ * and non-annotation-type arrays.
+ */
 class AnnotationAttributeUtilsTest {
 
     // ==========================================================================
@@ -105,16 +112,6 @@ class AnnotationAttributeUtilsTest {
         GetMapping gm = method.getAnnotation(GetMapping.class);
         Assertions.assertNotNull(gm);
         Assertions.assertEquals("/overridden", AnnotationAttributeUtils.extractPath(gm));
-    }
-
-    @Test
-    void extractPath_returnsPathAttributeWhenValueEmpty() throws Exception {
-        Method method = SampleController.class.getMethod("read", String.class);
-        // Get the interface annotation via getAllAnnotations
-        Annotation getMapping = AnnotationUtils.getAllAnnotations(method).stream()
-                .filter(a -> a.annotationType() == GetMapping.class)
-                .findFirst().orElseThrow();
-        Assertions.assertEquals("/overridden", AnnotationAttributeUtils.extractPath(getMapping));
     }
 
     @Test

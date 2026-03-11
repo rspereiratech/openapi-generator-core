@@ -10,8 +10,6 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema;
 
-import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
@@ -41,6 +39,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link ValidationSchemaEnricher}.
+ *
+ * <p>Verifies that Jakarta Bean Validation annotations declared on DTO fields are
+ * correctly propagated to the corresponding OpenAPI schema properties, including
+ * {@code @JsonProperty} name aliasing and superclass field traversal.
+ */
 class ValidationSchemaEnricherTest {
 
     private final ValidationSchemaEnricher applier = new ValidationSchemaEnricher();

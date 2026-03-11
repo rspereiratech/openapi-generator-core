@@ -35,6 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Unit tests for {@link DefaultProcessorFactory}.
+ *
+ * <p>Verifies that each {@code create*} method returns a non-null instance of the
+ * expected implementation class and that factory methods satisfy their documented
+ * preconditions.
+ */
 class DefaultProcessorFactoryTest {
 
     private ProcessorFactory factory;
@@ -59,7 +66,7 @@ class DefaultProcessorFactoryTest {
     @Test
     void createParameterProcessor_returnsParameterProcessorImpl() {
         SchemaProcessor sp = factory.createSchemaProcessor();
-        ParameterProcessor pp = factory.createParameterProcessor(sp);
+        ParameterProcessor pp = factory.createParameterProcessor(sp, true, java.util.Set.of());
         assertNotNull(pp);
         assertInstanceOf(ParameterProcessorImpl.class, pp);
     }
@@ -67,7 +74,7 @@ class DefaultProcessorFactoryTest {
     @Test
     void createRequestBodyProcessor_returnsRequestBodyProcessorImpl() {
         SchemaProcessor sp = factory.createSchemaProcessor();
-        RequestBodyProcessor rb = factory.createRequestBodyProcessor(sp);
+        RequestBodyProcessor rb = factory.createRequestBodyProcessor(sp, "application/json");
         assertNotNull(rb);
         assertInstanceOf(RequestBodyProcessorImpl.class, rb);
     }
@@ -75,7 +82,7 @@ class DefaultProcessorFactoryTest {
     @Test
     void createResponseProcessor_returnsResponseProcessorImpl() {
         SchemaProcessor sp = factory.createSchemaProcessor();
-        ResponseProcessor rp = factory.createResponseProcessor(sp);
+        ResponseProcessor rp = factory.createResponseProcessor(sp, "*/*");
         assertNotNull(rp);
         assertInstanceOf(ResponseProcessorImpl.class, rp);
     }
@@ -84,9 +91,9 @@ class DefaultProcessorFactoryTest {
     void createOperationProcessor_returnsOperationProcessorImpl() {
         SchemaProcessor sp = factory.createSchemaProcessor();
         OperationProcessor op = factory.createOperationProcessor(
-                factory.createParameterProcessor(sp),
-                factory.createRequestBodyProcessor(sp),
-                factory.createResponseProcessor(sp));
+                factory.createParameterProcessor(sp, true, java.util.Set.of()),
+                factory.createRequestBodyProcessor(sp, "application/json"),
+                factory.createResponseProcessor(sp, "*/*"));
         assertNotNull(op);
         assertInstanceOf(OperationProcessorImpl.class, op);
     }

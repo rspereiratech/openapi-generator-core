@@ -243,12 +243,13 @@ See [`docs/Schema-Handlers.md`](docs/Schema-Handlers.md) for details on each han
 
 ## Post-Processors
 
-After all controllers are processed, three post-processors run in sequence:
+After all controllers are processed, four post-processors run in sequence:
 
 | Post-Processor | Description |
 |---|---|
 | `SchemaRegistryMergePostProcessor` | Merges component schemas collected during processing into the final model |
 | `PruneUnreferencedSchemasPostProcessor` | Removes schemas from `components/schemas` that are not referenced anywhere |
+| `SortSpecPostProcessor` | Sorts paths and response-code keys alphabetically when `sortOutput` is enabled |
 | `UniqueOperationIdPostProcessor` | Disambiguates duplicate operation IDs using a numeric suffix strategy |
 
 See [`docs/Post-Processors.md`](docs/Post-Processors.md) for details.

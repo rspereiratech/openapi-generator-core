@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.NegativeOrZero;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -24,15 +23,13 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class NegativeOrZeroConstraintHandler implements ConstraintHandler {
+public class NegativeOrZeroConstraintHandler extends AbstractConstraintHandler<NegativeOrZero> {
+
+    /** Creates a handler for {@link NegativeOrZero}. */
+    public NegativeOrZeroConstraintHandler() { super(NegativeOrZero.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof NegativeOrZero;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(NegativeOrZero ann, Type fieldType, Schema<?> property) {
         property.setMaximum(BigDecimal.ZERO);
     }
 }

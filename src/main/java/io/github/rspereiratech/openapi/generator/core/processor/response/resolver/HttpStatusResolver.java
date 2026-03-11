@@ -54,8 +54,15 @@ public interface HttpStatusResolver {
     /**
      * Returns a human-readable description (reason phrase) for the given HTTP status code.
      *
-     * @param statusCode the numeric HTTP status code as a string; must not be {@code null}
+     * <p>The special value {@code "default"} maps to the literal string
+     * {@code "default response"} as required by the OpenAPI specification.
+     * All other values are treated as numeric codes; unrecognised or non-numeric
+     * values fall back to {@code "Response"}.</p>
+     *
+     * @param statusCode the HTTP status code as a string (e.g. {@code "200"}, {@code "404"}),
+     *                   or the literal {@code "default"}; must not be {@code null}
      * @return the standard reason phrase (e.g. {@code "OK"}, {@code "Created"}),
+     *         {@code "default response"} for {@code "default"},
      *         or {@code "Response"} for unrecognised or non-numeric codes
      * @throws NullPointerException if {@code statusCode} is {@code null}
      */

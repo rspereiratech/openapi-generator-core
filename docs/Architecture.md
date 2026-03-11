@@ -103,7 +103,7 @@ Builds the `parameters` list for an operation. Handles:
 | `@RequestParam` | `query` |
 | `@RequestHeader` | `header` |
 | `@CookieValue` | `cookie` |
-| `Pageable` / `PageRequest` | Expands to `page` + `size` query parameters |
+| `Pageable` / `PageRequest` | Single `query` parameter with a `$ref` to the `Pageable` schema |
 
 ---
 
@@ -113,10 +113,10 @@ Builds the `responses` map for an operation.
 
 If `@ApiResponse` / `@ApiResponses` are present they are used directly. `@ApiResponse` annotations embedded in `@Operation(responses = …)` are also discovered and merged. Otherwise, the status code is resolved from `@ResponseStatus` or from HTTP method defaults:
 
-| HTTP Method | Default Status |
+| Condition | Default Status |
 |---|---|
-| `POST` | `201 Created` |
-| `DELETE` | `204 No Content` |
+| `POST` method | `201 Created` |
+| Void return type | `204 No Content` |
 | All others | `200 OK` |
 
 ---
@@ -217,6 +217,7 @@ core/
 │       │   └── ModelConvertersTypeSchemaHandler.java
 │       └── constraints/
 │           ├── ConstraintHandler.java
+│           ├── AbstractConstraintHandler.java
 │           ├── MinConstraintHandler.java
 │           ├── MaxConstraintHandler.java
 │           ├── DecimalMinConstraintHandler.java

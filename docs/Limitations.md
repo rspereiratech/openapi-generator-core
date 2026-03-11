@@ -46,7 +46,6 @@ The generator works entirely from bytecode at build time. Anything that is deter
 - **Custom `@Parameter` annotations** — only SpringDoc's `@Parameter` is recognised. Custom parameter annotations are ignored.
 - **`@Hidden`** — SpringDoc's `@Hidden` annotation (to exclude operations from the spec) is not supported.
 - **`@SecurityRequirement`** on individual methods — method-level security overrides are not supported. Security schemes are applied globally only.
-- **`@Deprecated`** — Java's `@Deprecated` annotation is not reflected as `deprecated: true` in the generated operation.
 
 ---
 

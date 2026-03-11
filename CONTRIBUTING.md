@@ -140,6 +140,7 @@ Add your post-processor to the list in `OpenApiGeneratorImpl`:
 List<PostProcessor> postProcessors = List.of(
     new SchemaRegistryMergePostProcessor(registry),
     new PruneUnreferencedSchemasPostProcessor(),
+    new SortSpecPostProcessor(config.sortOutput()),
     new UniqueOperationIdPostProcessor(),
     new MyPostProcessor()   // add here
 );
@@ -171,7 +172,7 @@ Always write a test that verifies the annotation is correctly resolved in the ge
 - Post-processors go under `postprocessor/`.
 - Utilities go under `utils/`.
 - All public classes and methods must have Javadoc.
-- Tests use JUnit 5 with `@DisplayName` and `@Nested` grouped by method or scenario.
+- Tests use JUnit 5. Test methods are grouped by scenario using `// ===` section-separator comments rather than `@Nested` classes.
 
 ---
 

@@ -24,6 +24,13 @@ import java.util.List;
 import java.util.Set;
 
 
+/**
+ * Unit tests for {@link io.github.rspereiratech.openapi.generator.core.scanner.DefaultClasspathScanner}.
+ *
+ * <p>Covers discovery of classes annotated with {@code @RestController} (directly and via
+ * composed / multi-level meta-annotations), custom annotation filtering via
+ * {@code controllerAnnotations}, and exclusion of non-controller classes.
+ */
 class DefaultClasspathScannerTest {
 
     // ==========================================================================
@@ -217,15 +224,4 @@ class DefaultClasspathScannerTest {
     // Convenience overload (no additionalAnnotations)
     // ==========================================================================
 
-    @Test
-    void scan_convenientOverload_worksIdenticallyToEmptySet() throws Exception {
-        DefaultClasspathScanner scanner = new DefaultClasspathScanner();
-
-        List<Class<?>> withEmpty  = scanner.scan(List.of(TEST_PACKAGE), CL, Set.of());
-        List<Class<?>> withConvenience = scanner.scan(List.of(TEST_PACKAGE), CL);
-
-        // Both results should contain the same controllers
-        Assertions.assertTrue(withConvenience.containsAll(withEmpty));
-        Assertions.assertTrue(withEmpty.containsAll(withConvenience));
-    }
 }

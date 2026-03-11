@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Email;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
 /**
@@ -23,15 +22,13 @@ import java.lang.reflect.Type;
  *
  * @author ruispereira
  */
-public class EmailConstraintHandler implements ConstraintHandler {
+public class EmailConstraintHandler extends AbstractConstraintHandler<Email> {
+
+    /** Creates a handler for {@link Email}. */
+    public EmailConstraintHandler() { super(Email.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Email;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(Email ann, Type fieldType, Schema<?> property) {
         property.setFormat("email");
     }
 }

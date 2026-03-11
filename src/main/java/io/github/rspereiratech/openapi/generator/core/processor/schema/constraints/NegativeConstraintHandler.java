@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Negative;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -24,15 +23,13 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class NegativeConstraintHandler implements ConstraintHandler {
+public class NegativeConstraintHandler extends AbstractConstraintHandler<Negative> {
+
+    /** Creates a handler for {@link Negative}. */
+    public NegativeConstraintHandler() { super(Negative.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Negative;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
+    protected void applyTyped(Negative ann, Type fieldType, Schema<?> property) {
         property.setMaximum(BigDecimal.ZERO);
         property.setExclusiveMaximum(true);
     }

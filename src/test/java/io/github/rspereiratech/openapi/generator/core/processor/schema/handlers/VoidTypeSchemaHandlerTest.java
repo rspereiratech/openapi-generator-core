@@ -19,6 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link VoidTypeSchemaHandler}.
+ *
+ * <p>Verifies that {@code void} and {@code Void} types are handled by this handler
+ * and resolve to {@code null}, and that other types are not handled.
+ */
 class VoidTypeSchemaHandlerTest {
 
     private VoidTypeSchemaHandler handler;

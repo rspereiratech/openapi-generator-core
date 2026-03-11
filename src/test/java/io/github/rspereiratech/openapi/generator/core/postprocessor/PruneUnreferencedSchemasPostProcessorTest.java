@@ -30,6 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link PruneUnreferencedSchemasPostProcessor}.
+ *
+ * <p>Verifies that schemas in {@code components/schemas} that are not referenced by any
+ * {@code $ref} in the spec (paths, request bodies, responses, or nested schemas) are
+ * removed, and that referenced schemas are retained.
+ */
 class PruneUnreferencedSchemasPostProcessorTest {
 
     private PruneUnreferencedSchemasPostProcessor processor;

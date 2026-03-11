@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Min;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -24,15 +23,13 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class MinConstraintHandler implements ConstraintHandler {
+public class MinConstraintHandler extends AbstractConstraintHandler<Min> {
+
+    /** Creates a handler for {@link Min}. */
+    public MinConstraintHandler() { super(Min.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Min;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
-        property.setMinimum(BigDecimal.valueOf(((Min) annotation).value()));
+    protected void applyTyped(Min ann, Type fieldType, Schema<?> property) {
+        property.setMinimum(BigDecimal.valueOf(ann.value()));
     }
 }

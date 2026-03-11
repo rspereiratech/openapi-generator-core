@@ -21,6 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Unit tests for {@link UniqueOperationIdPostProcessor}.
+ *
+ * <p>Verifies that duplicate {@code operationId} values are disambiguated by
+ * appending a numeric suffix (e.g. {@code getById_1}, {@code getById_2}),
+ * and that operations with no {@code operationId} are left unchanged.
+ */
 class UniqueOperationIdPostProcessorTest {
 
     private UniqueOperationIdPostProcessor processor;

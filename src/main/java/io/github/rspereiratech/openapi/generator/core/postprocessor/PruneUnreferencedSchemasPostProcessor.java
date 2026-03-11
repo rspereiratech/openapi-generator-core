@@ -37,6 +37,17 @@ public class PruneUnreferencedSchemasPostProcessor implements PostProcessor {
     /** Matches {@code $ref} values that point to a component schema, capturing the schema name. */
     private static final Pattern REF_PATTERN = Pattern.compile("#/components/schemas/([\\w]+)");
 
+    /**
+     * Removes every entry from {@code components/schemas} that is not referenced by a
+     * {@code $ref} anywhere in the serialised document.
+     *
+     * <p>The document is temporarily serialised to JSON so that {@code $ref} values
+     * inside nested schemas are also detected. If serialisation fails the step is
+     * skipped silently to avoid blocking the generation pipeline.</p>
+     *
+     * @param openAPI the OpenAPI model to prune in-place; must not be {@code null}
+     * @throws NullPointerException if {@code openAPI} is {@code null}
+     */
     @Override
     public void process(OpenAPI openAPI) {
         Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");
@@ -48,7 +59,7 @@ public class PruneUnreferencedSchemasPostProcessor implements PostProcessor {
             String json = Json.mapper().writeValueAsString(openAPI);
             Set<String> referenced = REF_PATTERN.matcher(json).results()
                     .map(mr -> mr.group(1))
-                    .collect(Collectors.toSet());
+                    .collect(Collectors.toUnmodifiableSet());
             int before = openAPI.getComponents().getSchemas().size();
             openAPI.getComponents().getSchemas().keySet().removeIf(Predicate.not(referenced::contains));
             int removed = before - openAPI.getComponents().getSchemas().size();

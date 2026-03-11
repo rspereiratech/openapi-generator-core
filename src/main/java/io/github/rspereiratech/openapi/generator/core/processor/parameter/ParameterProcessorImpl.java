@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -101,17 +102,6 @@ public class ParameterProcessorImpl implements ParameterProcessor {
     private final SchemaProcessor schemaProcessor;
 
     /**
-     * Creates a new {@code ParameterProcessorImpl} with the default ignored types enabled
-     * and no additional ignored types.
-     *
-     * @param schemaProcessor the shared schema processor; must not be {@code null}
-     * @throws NullPointerException if {@code schemaProcessor} is {@code null}
-     */
-    public ParameterProcessorImpl(SchemaProcessor schemaProcessor) {
-        this(schemaProcessor, true, Set.of());
-    }
-
-    /**
      * Creates a new {@code ParameterProcessorImpl} with full control over which
      * parameter types are ignored.
      *
@@ -127,7 +117,7 @@ public class ParameterProcessorImpl implements ParameterProcessor {
         this.schemaProcessor = Preconditions.checkNotNull(schemaProcessor, "schemaProcessor must not be null");
         Preconditions.checkNotNull(additionalIgnoredTypes, "additionalIgnoredTypes must not be null");
         if (ignoreDefaultParamTypes) {
-            var combined = new java.util.HashSet<>(DEFAULT_IGNORED_PARAM_TYPES);
+            var combined = new HashSet<>(DEFAULT_IGNORED_PARAM_TYPES);
             combined.addAll(additionalIgnoredTypes);
             this.ignoredParamTypes = Set.copyOf(combined);
         } else {
@@ -225,19 +215,58 @@ public class ParameterProcessorImpl implements ParameterProcessor {
             return Optional.empty();
         }
 
-        if (ignoredParamTypes.contains(param.getType().getName())) {
-            log.trace("Skipping ignored param type: {}", param.getType().getName());
-            return Optional.empty();
-        }
-
         if (isHiddenSwaggerAnnotation(annotations)) return Optional.empty();
 
+        Optional<Schema<?>> schemaOverride = Optional.empty();
+        if (ignoredParamTypes.contains(param.getType().getName())) {
+            schemaOverride = extractExplicitParameterSchema(annotations);
+            if (schemaOverride.isEmpty()) {
+                log.trace("Skipping ignored param type: {}", param.getType().getName());
+                return Optional.empty();
+            }
+            log.trace("Ignored param type {} overridden via explicit @Parameter(schema=...)", param.getType().getName());
+        }
+
+        final Optional<Schema<?>> finalSchemaOverride = schemaOverride;
         return Arrays.stream(annotations)
                 .filter(ann -> ANNOTATION_TO_LOCATION.containsKey(ann.annotationType().getSimpleName()))
                 .findFirst()
                 .map(ann -> buildParameter(param, ann,
                         ANNOTATION_TO_LOCATION.get(ann.annotationType().getSimpleName()),
-                        annotations, typeVarMap));
+                        annotations, typeVarMap, finalSchemaOverride));
+    }
+
+    /**
+     * Extracts an explicit OpenAPI {@link Schema} from a {@code @Parameter(schema = @Schema(...))}
+     * annotation, if present and carrying a non-default {@code type} or {@code implementation}.
+     *
+     * <p>Returns {@link Optional#empty()} if no {@code @Parameter} annotation is found, or if
+     * the nested {@code @Schema} carries only default values (blank {@code type} and
+     * {@code Void.class} implementation).</p>
+     *
+     * @param annotations the effective annotations on the method parameter
+     * @return an {@link Optional} containing the explicit schema, or empty if none is defined
+     */
+    private Optional<Schema<?>> extractExplicitParameterSchema(Annotation[] annotations) {
+        return Arrays.stream(annotations)
+                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameter"))
+                .findFirst()
+                .flatMap(ann -> AnnotationAttributeUtils.getAnnotationAttribute(ann, "schema"))
+                .flatMap(schemaAnn -> {
+                    String type = AnnotationAttributeUtils.getStringAttribute(schemaAnn, "type");
+                    if (!type.isBlank()) {
+                        Schema<?> schema = new Schema<>();
+                        schema.setType(type);
+                        String format = AnnotationAttributeUtils.getStringAttribute(schemaAnn, "format");
+                        if (!format.isBlank()) schema.setFormat(format);
+                        String example = AnnotationAttributeUtils.getStringAttribute(schemaAnn, "example");
+                        if (!example.isBlank()) schema.setExample(example);
+                        return Optional.of(schema);
+                    }
+                    return AnnotationAttributeUtils.getClassAttribute(schemaAnn, "implementation")
+                            .filter(c -> c != Void.class && c != void.class)
+                            .map(schemaProcessor::toSchema);
+                });
     }
 
     /**
@@ -254,14 +283,16 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                                      Annotation mappingAnnotation,
                                      String location,
                                      Annotation[] allAnnotations,
-                                     Map<TypeVariable<?>, Type> typeVarMap) {
+                                     Map<TypeVariable<?>, Type> typeVarMap,
+                                     Optional<Schema<?>> schemaOverride) {
         boolean isPath = "path".equals(location);
 
         Parameter parameter = isPath ? new PathParameter() : new QueryParameter();
         parameter.setIn(location);
         parameter.setName(resolveName(param, mappingAnnotation));
         parameter.setRequired(isPath || AnnotationAttributeUtils.getBooleanAttribute(mappingAnnotation, "required", false));
-        parameter.setSchema(schemaProcessor.toSchema(TypeUtils.resolveType(param.getParameterizedType(), typeVarMap)));
+        parameter.setSchema(schemaOverride.orElseGet(
+                () -> schemaProcessor.toSchema(TypeUtils.resolveType(param.getParameterizedType(), typeVarMap))));
 
         enrichFromSwaggerAnnotation(parameter, allAnnotations);
 

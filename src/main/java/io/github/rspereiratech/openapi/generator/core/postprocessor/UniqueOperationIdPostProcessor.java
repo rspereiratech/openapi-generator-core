@@ -42,6 +42,17 @@ import java.util.Map;
  */
 public class UniqueOperationIdPostProcessor implements PostProcessor {
 
+    /**
+     * Traverses every path item in the document and disambiguates duplicate
+     * {@code operationId} values by appending {@code _N} suffixes.
+     *
+     * <p>The first occurrence of any given {@code operationId} is left unchanged.
+     * Each subsequent duplicate is suffixed with {@code _1}, {@code _2}, etc.
+     * Operations without an {@code operationId} are skipped.</p>
+     *
+     * @param openAPI the OpenAPI model to update in-place; must not be {@code null}
+     * @throws NullPointerException if {@code openAPI} is {@code null}
+     */
     @Override
     public void process(OpenAPI openAPI) {
         Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");

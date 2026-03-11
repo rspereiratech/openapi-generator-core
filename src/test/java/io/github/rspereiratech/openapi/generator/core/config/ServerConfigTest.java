@@ -14,6 +14,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 
+/**
+ * Unit tests for {@link ServerConfig}.
+ *
+ * <p>Covers factory-method variants, null and blank validation on the {@code url} field,
+ * normalisation of a {@code null} description to an empty string, and record equality.
+ */
 class ServerConfigTest {
 
     // ==========================================================================

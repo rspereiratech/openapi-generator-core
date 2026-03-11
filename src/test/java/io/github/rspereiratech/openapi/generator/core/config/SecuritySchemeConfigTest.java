@@ -13,6 +13,12 @@ package io.github.rspereiratech.openapi.generator.core.config;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Unit tests for {@link SecuritySchemeConfig}.
+ *
+ * <p>Covers factory-method validation, default null values for optional fields,
+ * the {@code withXxx} wither methods, and record equality.
+ */
 class SecuritySchemeConfigTest {
 
     // ==========================================================================

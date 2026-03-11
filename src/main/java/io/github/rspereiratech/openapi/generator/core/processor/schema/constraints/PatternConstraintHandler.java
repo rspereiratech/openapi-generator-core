@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.Pattern;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
 /**
@@ -23,15 +22,13 @@ import java.lang.reflect.Type;
  *
  * @author ruispereira
  */
-public class PatternConstraintHandler implements ConstraintHandler {
+public class PatternConstraintHandler extends AbstractConstraintHandler<Pattern> {
+
+    /** Creates a handler for {@link Pattern}. */
+    public PatternConstraintHandler() { super(Pattern.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof Pattern;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
-        property.setPattern(((Pattern) annotation).regexp());
+    protected void applyTyped(Pattern ann, Type fieldType, Schema<?> property) {
+        property.setPattern(ann.regexp());
     }
 }

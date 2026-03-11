@@ -20,6 +20,13 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link FileUtils}.
+ *
+ * <p>Verifies that parent directories are created as needed before writing,
+ * and that {@link java.io.IOException} is propagated correctly when the path
+ * cannot be written.
+ */
 class FileUtilsTest {
 
     // ==========================================================================

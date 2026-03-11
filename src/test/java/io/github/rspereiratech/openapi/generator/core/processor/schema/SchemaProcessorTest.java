@@ -29,6 +29,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
+/**
+ * Unit tests for {@link SchemaProcessorImpl}.
+ *
+ * <p>Covers scalar type mapping, generic types ({@code List}, {@code Map},
+ * {@code ResponseEntity}, {@code Optional}), void handling, and complex DTO
+ * resolution via the chain-of-responsibility handler chain.
+ */
 class SchemaProcessorTest {
 
     private SchemaProcessor processor;

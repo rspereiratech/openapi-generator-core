@@ -13,6 +13,12 @@ package io.github.rspereiratech.openapi.generator.core.utils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Unit tests for {@link PathUtils}.
+ *
+ * <p>Covers path normalisation (null handling, leading/trailing slash trimming,
+ * duplicate-slash removal) and path concatenation.
+ */
 class PathUtilsTest {
 
     // ==========================================================================

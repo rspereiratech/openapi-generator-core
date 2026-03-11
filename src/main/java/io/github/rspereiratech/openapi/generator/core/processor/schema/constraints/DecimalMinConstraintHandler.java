@@ -13,7 +13,6 @@ package io.github.rspereiratech.openapi.generator.core.processor.schema.constrai
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 
@@ -25,17 +24,14 @@ import java.math.BigDecimal;
  *
  * @author ruispereira
  */
-public class DecimalMinConstraintHandler implements ConstraintHandler {
+public class DecimalMinConstraintHandler extends AbstractConstraintHandler<DecimalMin> {
+
+    /** Creates a handler for {@link DecimalMin}. */
+    public DecimalMinConstraintHandler() { super(DecimalMin.class); }
 
     @Override
-    public boolean supports(Annotation annotation) {
-        return annotation instanceof DecimalMin;
-    }
-
-    @Override
-    public void apply(Annotation annotation, Type fieldType, Schema<?> property) {
-        DecimalMin dMin = (DecimalMin) annotation;
-        property.setMinimum(new BigDecimal(dMin.value()));
-        if (!dMin.inclusive()) property.setExclusiveMinimum(true);
+    protected void applyTyped(DecimalMin ann, Type fieldType, Schema<?> property) {
+        property.setMinimum(new BigDecimal(ann.value()));
+        if (!ann.inclusive()) property.setExclusiveMinimum(true);
     }
 }

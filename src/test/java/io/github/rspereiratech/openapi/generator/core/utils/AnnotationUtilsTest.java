@@ -30,6 +30,13 @@ import java.util.Arrays;
 import java.util.List;
 
 
+/**
+ * Unit tests for {@link io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils}.
+ *
+ * <p>Covers recursive meta-annotation traversal on types and methods, collection of all
+ * annotations across the full type hierarchy (including superclasses and interfaces),
+ * and retrieval of all parameter annotations from controller methods.
+ */
 class AnnotationUtilsTest {
 
     // ==========================================================================
