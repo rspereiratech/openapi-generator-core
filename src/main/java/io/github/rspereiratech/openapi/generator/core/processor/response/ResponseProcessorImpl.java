@@ -30,8 +30,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -240,6 +242,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
                 .map(this::schemaFromAnnotation)
                 .orElse(null);
         if (schema == null) schema = arraySchemaFromAnnotation(contentAnn);
+        if (schema == null) schema = composedSchemaFromAnnotation(contentAnn);
         if (schema == null && !hasSchemaHints(contentAnn)) return null; // empty @Content → no body
         if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
         if (schema == null) return null;
@@ -247,6 +250,62 @@ public class ResponseProcessorImpl implements ResponseProcessor {
         Content content = new Content();
         content.addMediaType(mediaType, new MediaType().schema(schema));
         return content;
+    }
+
+    /**
+     * Builds a composed {@link Schema} from the {@code oneOf}, {@code allOf}, {@code anyOf},
+     * or {@code type} attributes declared on the {@code @Schema} annotation inside a
+     * Swagger {@code @Content} annotation.
+     *
+     * <p>Each class listed in {@code oneOf}/{@code allOf}/{@code anyOf} is resolved via
+     * {@link SchemaProcessor}; {@link Void} entries and unresolvable types are silently
+     * skipped.  When {@code type} is non-blank it is set on the resulting schema.
+     * Returns {@code null} when none of the attributes yield any content (e.g., all
+     * class arrays are empty and {@code type} is blank).</p>
+     *
+     * @param contentAnn the Swagger {@code @Content} annotation; must not be {@code null}
+     * @return a composed {@link Schema}, or {@code null}
+     */
+    @SuppressWarnings("java:S1168")
+    private Schema<?> composedSchemaFromAnnotation(Annotation contentAnn) {
+        return AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
+                .map(schemaAnn -> {
+                    try {
+                        Class<?>[] oneOf = (Class<?>[]) schemaAnn.annotationType().getMethod("oneOf").invoke(schemaAnn);
+                        Class<?>[] allOf = (Class<?>[]) schemaAnn.annotationType().getMethod("allOf").invoke(schemaAnn);
+                        Class<?>[] anyOf = (Class<?>[]) schemaAnn.annotationType().getMethod("anyOf").invoke(schemaAnn);
+                        String     type  = (String)    schemaAnn.annotationType().getMethod("type").invoke(schemaAnn);
+
+                        List<Schema> oneOfSchemas = toSchemaList(oneOf);
+                        List<Schema> allOfSchemas = toSchemaList(allOf);
+                        List<Schema> anyOfSchemas = toSchemaList(anyOf);
+
+                        if (oneOfSchemas.isEmpty() && allOfSchemas.isEmpty()
+                                && anyOfSchemas.isEmpty() && type.isBlank()) {
+                            return null;
+                        }
+
+                        Schema<?> composed = new Schema<>();
+                        if (!oneOfSchemas.isEmpty()) composed.setOneOf(oneOfSchemas);
+                        if (!allOfSchemas.isEmpty()) composed.setAllOf(allOfSchemas);
+                        if (!anyOfSchemas.isEmpty()) composed.setAnyOf(anyOfSchemas);
+                        if (!type.isBlank())         composed.setType(type);
+                        return composed;
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
+    }
+
+    /** Maps an array of classes to resolved {@link Schema} objects, skipping {@link Void} and nulls. */
+    private List<Schema> toSchemaList(Class<?>[] classes) {
+        return Arrays.stream(classes)
+                .filter(c -> c != Void.class)
+                .map(schemaProcessor::toSchema)
+                .filter(Objects::nonNull)
+                .map(s -> (Schema) s)
+                .toList();
     }
 
     /**

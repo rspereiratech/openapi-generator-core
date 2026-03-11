@@ -155,6 +155,47 @@ class ResponseProcessorTest {
                                 schema = @io.swagger.v3.oas.annotations.media.Schema(
                                         implementation = String.class))))
         public void apiResponseWithArraySchema() {}
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                oneOf = {String.class, Integer.class})))
+        public String apiResponseWithOneOf() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                allOf = {String.class})))
+        public String apiResponseWithAllOf() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                anyOf = {String.class, Integer.class})))
+        public String apiResponseWithAnyOf() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                type = "string")))
+        public String apiResponseWithSchemaType() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        mediaType = "application/json",
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(
+                                oneOf = {String.class})))
+        public String apiResponseWithOneOfAndMediaType() { return ""; }
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -372,6 +413,61 @@ class ResponseProcessorTest {
         Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
         assertNotNull(((ArraySchema) schema).getItems(),
                 "ArraySchema items must be resolved from @ArraySchema.schema.implementation");
+    }
+
+    // ==========================================================================
+    // @Schema(oneOf/allOf/anyOf/type) — composed schema resolution
+    // ==========================================================================
+
+    @Test
+    void apiResponseWithOneOf_schemaHasOneOfEntries() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithOneOf"), "GET");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertNotNull(schema.getOneOf(),
+                "oneOf declared in @Schema must produce a schema with oneOf entries");
+        assertEquals(2, schema.getOneOf().size(),
+                "Both classes declared in oneOf must be resolved");
+    }
+
+    @Test
+    void apiResponseWithOneOf_noAllOfNoAnyOf() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithOneOf"), "GET");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertNull(schema.getAllOf(), "allOf must be null when only oneOf is declared");
+        assertNull(schema.getAnyOf(), "anyOf must be null when only oneOf is declared");
+    }
+
+    @Test
+    void apiResponseWithAllOf_schemaHasAllOfEntries() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithAllOf"), "GET");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertNotNull(schema.getAllOf(),
+                "allOf declared in @Schema must produce a schema with allOf entries");
+        assertEquals(1, schema.getAllOf().size());
+    }
+
+    @Test
+    void apiResponseWithAnyOf_schemaHasAnyOfEntries() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithAnyOf"), "GET");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertNotNull(schema.getAnyOf(),
+                "anyOf declared in @Schema must produce a schema with anyOf entries");
+        assertEquals(2, schema.getAnyOf().size());
+    }
+
+    @Test
+    void apiResponseWithSchemaType_schemaHasType() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithSchemaType"), "GET");
+        Schema<?> schema = responses.get("200").getContent().get("*/*").getSchema();
+        assertEquals("string", schema.getType(),
+                "type declared in @Schema must be set on the resolved schema");
+    }
+
+    @Test
+    void apiResponseWithOneOfAndMediaType_usesExplicitMediaType() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithOneOfAndMediaType"), "GET");
+        assertNotNull(responses.get("200").getContent().get("application/json"),
+                "Explicit mediaType on @Content must be used even when schema uses oneOf");
     }
 
     // ==========================================================================
