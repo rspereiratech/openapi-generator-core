@@ -66,13 +66,23 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
                 ? FALLBACK_CONSUMES_MEDIA_TYPE : defaultConsumesMediaType;
     }
 
+    /**
+     * Carries the metadata extracted from a Swagger
+     * {@code @io.swagger.v3.oas.annotations.parameters.RequestBody} annotation.
+     *
+     * @param schema      the schema override resolved from {@code content[0].schema.implementation},
+     *                    or {@code null} when not declared
+     * @param description the value of the {@code description} attribute, or {@code ""} when absent
+     */
+    private record SwaggerBodyHints(Schema<?> schema, String description) {}
+
     @Override
     @SuppressWarnings("java:S1872")
     public Optional<RequestBody> processRequestBody(Method method, Map<TypeVariable<?>, Type> typeVarMap) {
         Preconditions.checkNotNull(method,     "'method' must not be null");
         Preconditions.checkNotNull(typeVarMap, "'typeVarMap' must not be null");
 
-        Schema<?> swaggerOverrideSchema = resolveSwaggerRequestBodySchema(method);
+        SwaggerBodyHints hints = resolveSwaggerBodyHints(method);
         Parameter[] params = method.getParameters();
 
         return IntStream.range(0, params.length)
@@ -80,11 +90,11 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
                         .filter(ann -> "RequestBody".equals(ann.annotationType().getSimpleName()))
                         .findFirst()
                         .map(ann -> {
-                            boolean required = getRequired(ann);
-                            Schema<?> schema = swaggerOverrideSchema != null
-                                    ? swaggerOverrideSchema
+                            boolean  required = getRequired(ann);
+                            Schema<?> schema  = hints.schema() != null
+                                    ? hints.schema()
                                     : schemaProcessor.toSchema(params[i].getParameterizedType(), typeVarMap);
-                            return buildRequestBody(schema, required, method);
+                            return buildRequestBody(schema, required, hints.description(), method);
                         }))
                 .flatMap(Optional::stream)
                 .findFirst();
@@ -92,24 +102,29 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
 
     /**
      * Searches all method parameters for a Swagger
-     * {@code @io.swagger.v3.oas.annotations.parameters.RequestBody} that declares an explicit
-     * {@code content[0].schema.implementation}, and returns the corresponding schema.
+     * {@code @io.swagger.v3.oas.annotations.parameters.RequestBody} annotation and extracts
+     * its {@code description} and {@code content[0].schema.implementation} attributes.
      *
-     * <p>Returns {@code null} when no such annotation is found or the implementation class
-     * cannot be extracted.</p>
+     * <p>Returns a {@link SwaggerBodyHints} with {@code null} schema and blank description when
+     * no such annotation is found.</p>
      *
      * @param method the controller method to inspect; must not be {@code null}
-     * @return the resolved {@link Schema}, or {@code null} if no override is present
+     * @return the extracted hints; never {@code null}
      */
-    private Schema<?> resolveSwaggerRequestBodySchema(Method method) {
+    private SwaggerBodyHints resolveSwaggerBodyHints(Method method) {
         return IntStream.range(0, method.getParameterCount())
                 .boxed()
                 .flatMap(i -> Arrays.stream(AnnotationUtils.getAllParameterAnnotations(method, i)))
                 .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "RequestBody"))
                 .findFirst()
-                .flatMap(this::extractImplementationClass)
-                .map(schemaProcessor::toSchema)
-                .orElse(null);
+                .map(ann -> {
+                    String    description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
+                    Schema<?> schema      = extractImplementationClass(ann)
+                            .map(schemaProcessor::toSchema)
+                            .orElse(null);
+                    return new SwaggerBodyHints(schema, description);
+                })
+                .orElse(new SwaggerBodyHints(null, ""));
     }
 
     /**
@@ -122,7 +137,7 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      * @return the implementation {@link Class}, or empty if not present or unresolvable
      */
     private Optional<Class<?>> extractImplementationClass(Annotation requestBodyAnn) {
-        List<Annotation> contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(requestBodyAnn, "content");
+        var contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(requestBodyAnn, "content");
         if (contentArr.isEmpty()) return Optional.empty();
 
         return AnnotationAttributeUtils.getAnnotationAttribute(contentArr.getFirst(), "schema")
@@ -131,27 +146,30 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
     }
 
     /**
-     * Assembles an OpenAPI {@link RequestBody} from the resolved schema.
+     * Assembles an OpenAPI {@link RequestBody} from the resolved schema and metadata.
      *
      * <p>The media type is determined by {@link #resolveConsumes(Method)}, defaulting to
-     * {@value #FALLBACK_CONSUMES_MEDIA_TYPE} when no {@code consumes} attribute is declared.</p>
+     * {@value #FALLBACK_CONSUMES_MEDIA_TYPE} when no {@code consumes} attribute is declared.
+     * The {@code description} is applied when non-blank.</p>
      *
-     * @param schema   the schema describing the body content; must not be {@code null}
-     * @param required whether the request body is required
-     * @param method   the controller method; used to resolve the media type
+     * @param schema      the schema describing the body content; must not be {@code null}
+     * @param required    whether the request body is required
+     * @param description the description from the Swagger {@code @RequestBody} annotation, or {@code ""}
+     * @param method      the controller method; used to resolve the media type
      * @return the populated {@link RequestBody}
      */
-    private RequestBody buildRequestBody(Schema<?> schema, boolean required, Method method) {
-        String mediaType = resolveConsumes(method);
+    private RequestBody buildRequestBody(Schema<?> schema, boolean required, String description, Method method) {
+        var mediaType = resolveConsumes(method);
 
-        Content content = new Content();
+        var content = new Content();
         content.addMediaType(mediaType, new MediaType().schema(schema));
 
-        RequestBody body = new RequestBody();
+        var body = new RequestBody();
         body.setRequired(required);
         body.setContent(content);
+        if (!description.isBlank()) body.setDescription(description);
 
-        log.trace("RequestBody → mediaType:{} required:{}", mediaType, required);
+        log.trace("RequestBody → mediaType:{} required:{} description:{}", mediaType, required, description);
         return body;
     }
 

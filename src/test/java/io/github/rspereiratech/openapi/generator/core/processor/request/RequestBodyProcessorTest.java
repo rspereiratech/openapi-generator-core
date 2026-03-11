@@ -25,8 +25,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.lang.reflect.Method;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,6 +86,12 @@ class RequestBodyProcessorTest {
                         content = @io.swagger.v3.oas.annotations.media.Content(
                                 schema = @io.swagger.v3.oas.annotations.media.Schema(
                                         implementation = String.class)))
+                @org.springframework.web.bind.annotation.RequestBody String body) { return ""; }
+
+        @PostMapping
+        public String withSwaggerRequestBodyDescription(
+                @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                        description = "List of items to process")
                 @org.springframework.web.bind.annotation.RequestBody String body) { return ""; }
     }
 
@@ -172,11 +180,24 @@ class RequestBodyProcessorTest {
 
     @Test
     void swaggerRequestBodyOverride_usesImplementationClassSchema() throws Exception {
-        // @io.swagger.v3.oas.annotations.parameters.RequestBody triggers extractImplementationClass
-        // which calls firstAnnotation(schemaAnnotation) → covers the Annotation branch
         Optional<RequestBody> result = processor.processRequestBody(
                 method("withSwaggerRequestBodyOverride", String.class));
         assertTrue(result.isPresent(), "RequestBody must be detected via Swagger @RequestBody override");
+    }
+
+    @Test
+    void swaggerRequestBodyDescription_isAppliedToRequestBody() throws Exception {
+        var result = processor.processRequestBody(
+                method("withSwaggerRequestBodyDescription", String.class));
+        assertTrue(result.isPresent());
+        assertEquals("List of items to process", result.get().getDescription());
+    }
+
+    @Test
+    void noSwaggerRequestBodyDescription_descriptionIsNull() throws Exception {
+        var result = processor.processRequestBody(method("withBody", String.class));
+        assertTrue(result.isPresent());
+        assertNull(result.get().getDescription());
     }
 
     // ==========================================================================
