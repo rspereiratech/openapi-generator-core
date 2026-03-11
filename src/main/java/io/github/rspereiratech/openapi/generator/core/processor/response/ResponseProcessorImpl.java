@@ -295,12 +295,13 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * @param classes the array of implementation classes to resolve
      * @return list of resolved schemas; never {@code null}, may be empty
      */
-    @SuppressWarnings({"rawtypes", "unchecked"}) // raw List<Schema> matches the Swagger Core setOneOf/setAllOf/setAnyOf API
+    @SuppressWarnings("rawtypes") // raw Schema matches the Swagger Core setOneOf/setAllOf/setAnyOf API
     private List<Schema> toSchemaList(Class<?>[] classes) {
-        return (List<Schema>) (List<?>) Arrays.stream(classes)
+        return Arrays.stream(classes)
                 .filter(c -> c != Void.class)
                 .map(schemaProcessor::toSchema)
                 .filter(Objects::nonNull)
+                .map(s -> (Schema) s)
                 .toList();
     }
 
