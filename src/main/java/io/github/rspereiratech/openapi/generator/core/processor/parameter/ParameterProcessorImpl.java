@@ -170,7 +170,6 @@ public class ParameterProcessorImpl implements ParameterProcessor {
      * @param headerExpression a Spring MVC header expression; must not be blank or start with {@code !}
      * @return the populated {@link Parameter} with {@code in: header} and {@code required: true}
      */
-    @SuppressWarnings("unchecked")
     private static Parameter buildMappingHeaderParameter(String headerExpression) {
         int eqIdx = headerExpression.indexOf('=');
 

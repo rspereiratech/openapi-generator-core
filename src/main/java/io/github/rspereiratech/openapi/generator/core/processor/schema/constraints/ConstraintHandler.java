@@ -32,7 +32,6 @@ import java.lang.reflect.Type;
  * @author ruispereira
  * @see ValidationSchemaEnricher
  */
-@SuppressWarnings("java:S1452") // Schema<?> is intentional
 public interface ConstraintHandler {
 
     /**

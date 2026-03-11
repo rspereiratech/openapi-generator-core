@@ -39,7 +39,6 @@ import java.lang.reflect.Type;
  * @author ruispereira
  * @see ConstraintHandler
  */
-@SuppressWarnings("java:S1452") // Schema<?> wildcard is intentional
 public abstract class AbstractConstraintHandler<A extends Annotation> implements ConstraintHandler {
 
     /** The annotation type this handler is responsible for. */

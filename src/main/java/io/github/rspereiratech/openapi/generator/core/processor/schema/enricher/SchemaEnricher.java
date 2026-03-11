@@ -33,7 +33,6 @@ import java.util.Map;
  * @see ValidationSchemaEnricher
  * @see SchemaAnnotationEnricher
  */
-@SuppressWarnings("java:S1452")
 public interface SchemaEnricher {
 
     /**
