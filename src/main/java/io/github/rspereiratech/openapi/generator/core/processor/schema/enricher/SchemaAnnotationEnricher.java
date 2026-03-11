@@ -10,6 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema.enricher;
 
+import com.google.common.base.Preconditions;
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.lang.reflect.Type;
@@ -67,12 +68,13 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      *
      * <p>Does nothing when {@code schemas} is {@code null} or empty.
      *
-     * @param type    the root type to start class traversal from; never {@code null}
+     * @param type    the root type to start class traversal from; must not be {@code null}
      * @param schemas mutable map of schema-name → schema; enricher mutates values in-place
+     * @throws NullPointerException if {@code type} is {@code null}
      */
     @Override
-    @SuppressWarnings("java:S1452")
     public void apply(Type type, Map<String, Schema<?>> schemas) {
+        Preconditions.checkNotNull(type, "'type' must not be null");
         if (schemas == null || schemas.isEmpty()) return;
 
         SchemaEnricherSupport.collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
@@ -94,7 +96,6 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      * @param clazz  the class to inspect; must not be {@code null}
      * @param schema the OpenAPI schema to enrich; must not be {@code null}
      */
-    @SuppressWarnings("java:S1452")
     private static void applyClassLevelAnnotation(Class<?> clazz, Schema<?> schema) {
         io.swagger.v3.oas.annotations.media.Schema ann =
                 clazz.getAnnotation(io.swagger.v3.oas.annotations.media.Schema.class);
@@ -129,7 +130,7 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      * @param clazz  the class whose fields are inspected; must not be {@code null}
      * @param schema the OpenAPI schema whose properties may be mutated; must not be {@code null}
      */
-    @SuppressWarnings({"unchecked", "java:S1452"})
+    @SuppressWarnings("unchecked") // schema.getProperties() returns raw Map<String, Schema>; cast to Schema<?> is safe
     private static void applyFieldLevelAnnotations(Class<?> clazz, Schema<?> schema) {
         if (schema.getProperties() == null) return;
 

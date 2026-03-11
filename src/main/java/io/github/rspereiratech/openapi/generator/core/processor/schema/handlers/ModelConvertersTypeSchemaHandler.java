@@ -82,13 +82,38 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
         this.enrichers = List.copyOf(enrichers);
     }
 
+    /**
+     * Always returns {@code true}; this handler is the catch-all fallback and must
+     * be placed last in the chain so more-specific handlers are tried first.
+     *
+     * @param type the type to test; must not be {@code null}
+     * @return {@code true} unconditionally
+     * @throws NullPointerException if {@code type} is {@code null}
+     */
     @Override
     public boolean supports(Type type) {
+        Preconditions.checkNotNull(type, "'type' must not be null");
         return true; // catch-all fallback — must be last in the chain
     }
 
+    /**
+     * Resolves {@code type} to an OpenAPI {@link Schema} using Swagger's
+     * {@link ModelConverters} engine, registers any referenced component schemas into
+     * {@code schemaProcessor}'s registry, and applies the enricher chain.
+     *
+     * <p>If {@code ModelConverters} returns {@code null} for the type, a warning is
+     * logged and an empty schema is returned. Any unexpected exception is caught,
+     * logged at DEBUG level, and an empty schema is returned in its place.
+     *
+     * @param type            the type to resolve; must not be {@code null}
+     * @param schemaProcessor used for schema-registry access; must not be {@code null}
+     * @return the resolved schema, or an empty {@link Schema} if resolution fails
+     * @throws NullPointerException if {@code type} or {@code schemaProcessor} is {@code null}
+     */
     @Override
     public Schema<?> resolve(Type type, SchemaProcessor schemaProcessor) {
+        Preconditions.checkNotNull(type, "'type' must not be null");
+        Preconditions.checkNotNull(schemaProcessor, "'schemaProcessor' must not be null");
         try {
             AnnotatedType annotatedType = new AnnotatedType(type).resolveAsRef(true);
             ResolvedSchema resolved = ModelConverters.getInstance()

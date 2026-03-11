@@ -29,6 +29,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
 
@@ -132,10 +133,14 @@ class ModelConvertersTypeSchemaHandlerTest {
     }
 
     @Test
-    void resolve_nestedComplexType_registersAllReferencedSchemas() {
+    void resolve_nestedComplexType_registersRootSchemaInRegistry() {
         handler.resolve(NestedDto.class, schemaProcessor);
-        assertTrue(registry.containsKey("NestedDto"),
-                "NestedDto must be registered");
+        assertTrue(registry.containsKey("NestedDto"), "NestedDto must be registered");
+    }
+
+    @Test
+    void resolve_nestedComplexType_registersNestedSchemaInRegistry() {
+        handler.resolve(NestedDto.class, schemaProcessor);
         assertTrue(registry.containsKey("SimpleDto"),
                 "Nested SimpleDto must also be registered as a referenced schema");
     }
@@ -228,5 +233,24 @@ class ModelConvertersTypeSchemaHandlerTest {
         assertNotNull(prop, "productName property must be present");
         assertEquals("Product name", prop.getDescription(),
                 "@Schema(description) at field level must be propagated to the property schema");
+    }
+
+    // ==========================================================================
+    // Null guards
+    // ==========================================================================
+
+    @Test
+    void supports_nullType_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> handler.supports(null));
+    }
+
+    @Test
+    void resolve_nullType_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> handler.resolve(null, schemaProcessor));
+    }
+
+    @Test
+    void resolve_nullSchemaProcessor_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> handler.resolve(String.class, null));
     }
 }

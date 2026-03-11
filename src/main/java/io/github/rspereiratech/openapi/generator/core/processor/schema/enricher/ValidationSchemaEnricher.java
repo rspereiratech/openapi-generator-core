@@ -29,7 +29,6 @@ import io.github.rspereiratech.openapi.generator.core.processor.schema.constrain
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -134,10 +133,11 @@ public class ValidationSchemaEnricher implements SchemaEnricher {
      *
      * @param type    the root type to start class traversal from; must not be {@code null}
      * @param schemas the mutable map of schema name → schema produced by {@code ModelConverters}
+     * @throws NullPointerException if {@code type} is {@code null}
      */
     @Override
-    @SuppressWarnings("java:S1452")
     public void apply(Type type, Map<String, Schema<?>> schemas) {
+        Preconditions.checkNotNull(type, "'type' must not be null");
         if (schemas == null || schemas.isEmpty()) return;
 
         SchemaEnricherSupport.collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
@@ -164,7 +164,7 @@ public class ValidationSchemaEnricher implements SchemaEnricher {
      * @param clazz  the class whose fields are inspected; must not be {@code null}
      * @param schema the OpenAPI schema whose properties are mutated; must not be {@code null}
      */
-    @SuppressWarnings({"unchecked", "rawtypes", "java:S1452"})
+    @SuppressWarnings({"unchecked", "rawtypes"}) // schema.getProperties() returns raw Map<String, Schema>; cast to Schema<?> is safe
     private void applyConstraintsFromClass(Class<?> clazz, Schema<?> schema) {
         Map<String, ?> properties = schema.getProperties();
 
@@ -183,7 +183,6 @@ public class ValidationSchemaEnricher implements SchemaEnricher {
      * @param fieldType  the declared type of the annotated field
      * @param property   the OpenAPI schema property to mutate; must not be {@code null}
      */
-    @SuppressWarnings("java:S1452")
     private void applyConstraint(Annotation annotation, Type fieldType, Schema<?> property) {
         handlers.stream()
                 .filter(h -> h.supports(annotation))

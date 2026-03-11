@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -165,21 +166,21 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void min_setsMinimumOnProperty() {
+    void apply_fieldAnnotatedWithMin_setsMinimumOnProperty() {
         var schemas = schemasFor(MinMaxDto.class);
         applier.apply(MinMaxDto.class, schemas);
         assertEquals(BigDecimal.valueOf(5), prop(schemas, MinMaxDto.class, "count").getMinimum());
     }
 
     @Test
-    void max_setsMaximumOnProperty() {
+    void apply_fieldAnnotatedWithMax_setsMaximumOnProperty() {
         var schemas = schemasFor(MinMaxDto.class);
         applier.apply(MinMaxDto.class, schemas);
         assertEquals(BigDecimal.valueOf(100), prop(schemas, MinMaxDto.class, "limit").getMaximum());
     }
 
     @Test
-    void min_doesNotAffectOtherProperties() {
+    void apply_fieldAnnotatedWithMinOnly_doesNotSetMaximumOnProperty() {
         var schemas = schemasFor(MinMaxDto.class);
         applier.apply(MinMaxDto.class, schemas);
         assertNull(prop(schemas, MinMaxDto.class, "count").getMaximum());
@@ -190,21 +191,21 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void decimalMin_setsMinimum() {
+    void apply_fieldAnnotatedWithDecimalMin_setsMinimumOnProperty() {
         var schemas = schemasFor(DecimalMinMaxDto.class);
         applier.apply(DecimalMinMaxDto.class, schemas);
         assertEquals(new BigDecimal("1.5"), prop(schemas, DecimalMinMaxDto.class, "price").getMinimum());
     }
 
     @Test
-    void decimalMax_setsMaximum() {
+    void apply_fieldAnnotatedWithDecimalMax_setsMaximumOnProperty() {
         var schemas = schemasFor(DecimalMinMaxDto.class);
         applier.apply(DecimalMinMaxDto.class, schemas);
         assertEquals(new BigDecimal("9.9"), prop(schemas, DecimalMinMaxDto.class, "discount").getMaximum());
     }
 
     @Test
-    void decimalMin_inclusive_doesNotSetExclusiveMinimum() {
+    void apply_fieldAnnotatedWithDecimalMinInclusive_doesNotSetExclusiveMinimum() {
         var schemas = schemasFor(DecimalMinMaxDto.class);
         applier.apply(DecimalMinMaxDto.class, schemas);
         assertNull(prop(schemas, DecimalMinMaxDto.class, "price").getExclusiveMinimum(),
@@ -212,7 +213,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void decimalMin_notInclusive_setsExclusiveMinimum() {
+    void apply_fieldAnnotatedWithDecimalMinNotInclusive_setsExclusiveMinimum() {
         var schemas = schemasFor(DecimalMinMaxExclusiveDto.class);
         applier.apply(DecimalMinMaxExclusiveDto.class, schemas);
         assertTrue(prop(schemas, DecimalMinMaxExclusiveDto.class, "price").getExclusiveMinimum(),
@@ -220,7 +221,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void decimalMax_notInclusive_setsExclusiveMaximum() {
+    void apply_fieldAnnotatedWithDecimalMaxNotInclusive_setsExclusiveMaximum() {
         var schemas = schemasFor(DecimalMinMaxExclusiveDto.class);
         applier.apply(DecimalMinMaxExclusiveDto.class, schemas);
         assertTrue(prop(schemas, DecimalMinMaxExclusiveDto.class, "discount").getExclusiveMaximum(),
@@ -232,7 +233,7 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void size_setsMinLengthAndMaxLength() {
+    void apply_fieldAnnotatedWithSizeOnString_setsMinLengthAndMaxLength() {
         var schemas = schemasFor(SizeDto.class);
         applier.apply(SizeDto.class, schemas);
         assertAll(
@@ -242,7 +243,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void size_minZero_doesNotSetMinLength() {
+    void apply_fieldAnnotatedWithSizeMinZero_doesNotSetMinLength() {
         var schemas = schemasFor(SizeMaxOnlyDto.class);
         applier.apply(SizeMaxOnlyDto.class, schemas);
         assertNull(prop(schemas, SizeMaxOnlyDto.class, "description").getMinLength(),
@@ -250,7 +251,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void size_maxIntegerMax_doesNotSetMaxLength() {
+    void apply_fieldAnnotatedWithSizeMaxIntegerMax_doesNotSetMaxLength() {
         var schemas = schemasFor(SizeMinOnlyDto.class);
         applier.apply(SizeMinOnlyDto.class, schemas);
         assertNull(prop(schemas, SizeMinOnlyDto.class, "tag").getMaxLength(),
@@ -262,28 +263,28 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void notNull_setsNullableFalse() {
+    void apply_fieldAnnotatedWithNotNull_setsNullableFalse() {
         var schemas = schemasFor(NotNullDto.class);
         applier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "required").getNullable());
     }
 
     @Test
-    void notBlank_setsNullableFalse() {
+    void apply_fieldAnnotatedWithNotBlank_setsNullableFalse() {
         var schemas = schemasFor(NotNullDto.class);
         applier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "nonBlank").getNullable());
     }
 
     @Test
-    void notEmpty_setsNullableFalse() {
+    void apply_fieldAnnotatedWithNotEmpty_setsNullableFalse() {
         var schemas = schemasFor(NotNullDto.class);
         applier.apply(NotNullDto.class, schemas);
         assertFalse(prop(schemas, NotNullDto.class, "nonEmpty").getNullable());
     }
 
     @Test
-    void notBlank_setsMinLengthOne() {
+    void apply_fieldAnnotatedWithNotBlank_setsMinLengthOne() {
         var schemas = schemasFor(NotNullDto.class);
         applier.apply(NotNullDto.class, schemas);
         assertEquals(1, prop(schemas, NotNullDto.class, "nonBlank").getMinLength(),
@@ -291,7 +292,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void notEmpty_onString_setsMinLengthOne() {
+    void apply_fieldAnnotatedWithNotEmptyOnString_setsMinLengthOne() {
         var schemas = schemasFor(NotNullDto.class);
         applier.apply(NotNullDto.class, schemas);
         assertEquals(1, prop(schemas, NotNullDto.class, "nonEmpty").getMinLength(),
@@ -299,7 +300,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void notEmpty_onList_setsMinItemsOne() {
+    void apply_fieldAnnotatedWithNotEmptyOnList_setsMinItemsOne() {
         var schemas = schemasFor(NotEmptyListDto.class);
         applier.apply(NotEmptyListDto.class, schemas);
         assertEquals(1, prop(schemas, NotEmptyListDto.class, "tags").getMinItems(),
@@ -307,7 +308,7 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void notNull_doesNotSetMinLength() {
+    void apply_fieldAnnotatedWithNotNull_doesNotSetMinLength() {
         var schemas = schemasFor(NotNullDto.class);
         applier.apply(NotNullDto.class, schemas);
         assertNull(prop(schemas, NotNullDto.class, "required").getMinLength(),
@@ -319,7 +320,7 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void pattern_setsPatternOnProperty() {
+    void apply_fieldAnnotatedWithPattern_setsPatternOnProperty() {
         var schemas = schemasFor(PatternDto.class);
         applier.apply(PatternDto.class, schemas);
         assertEquals("\\d{4}", prop(schemas, PatternDto.class, "year").getPattern());
@@ -330,7 +331,7 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void email_setsFormatEmail() {
+    void apply_fieldAnnotatedWithEmail_setsFormatEmail() {
         var schemas = schemasFor(EmailDto.class);
         applier.apply(EmailDto.class, schemas);
         assertEquals("email", prop(schemas, EmailDto.class, "address").getFormat());
@@ -341,10 +342,10 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void positive_setsMinimumZeroAndExclusiveMinimum() {
+    void apply_fieldAnnotatedWithPositive_setsMinimumZeroAndExclusiveMinimum() {
         var schemas = schemasFor(PositiveDto.class);
         applier.apply(PositiveDto.class, schemas);
-        Schema<?> prop = prop(schemas, PositiveDto.class, "positiveVal");
+        var prop = prop(schemas, PositiveDto.class, "positiveVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMinimum()),
                 () -> assertTrue(prop.getExclusiveMinimum(), "exclusiveMinimum must be true for @Positive")
@@ -352,10 +353,10 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void positiveOrZero_setsMinimumZeroWithoutExclusiveMinimum() {
+    void apply_fieldAnnotatedWithPositiveOrZero_setsMinimumZeroWithoutExclusiveMinimum() {
         var schemas = schemasFor(PositiveDto.class);
         applier.apply(PositiveDto.class, schemas);
-        Schema<?> prop = prop(schemas, PositiveDto.class, "positiveOrZeroVal");
+        var prop = prop(schemas, PositiveDto.class, "positiveOrZeroVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMinimum()),
                 () -> assertNull(prop.getExclusiveMinimum(), "exclusiveMinimum must not be set for @PositiveOrZero")
@@ -367,10 +368,10 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void negative_setsMaximumZeroAndExclusiveMaximum() {
+    void apply_fieldAnnotatedWithNegative_setsMaximumZeroAndExclusiveMaximum() {
         var schemas = schemasFor(NegativeDto.class);
         applier.apply(NegativeDto.class, schemas);
-        Schema<?> prop = prop(schemas, NegativeDto.class, "negativeVal");
+        var prop = prop(schemas, NegativeDto.class, "negativeVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMaximum()),
                 () -> assertTrue(prop.getExclusiveMaximum(), "exclusiveMaximum must be true for @Negative")
@@ -378,10 +379,10 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void negativeOrZero_setsMaximumZeroWithoutExclusiveMaximum() {
+    void apply_fieldAnnotatedWithNegativeOrZero_setsMaximumZeroWithoutExclusiveMaximum() {
         var schemas = schemasFor(NegativeDto.class);
         applier.apply(NegativeDto.class, schemas);
-        Schema<?> prop = prop(schemas, NegativeDto.class, "negativeOrZeroVal");
+        var prop = prop(schemas, NegativeDto.class, "negativeOrZeroVal");
         assertAll(
                 () -> assertEquals(BigDecimal.ZERO, prop.getMaximum()),
                 () -> assertNull(prop.getExclusiveMaximum(), "exclusiveMaximum must not be set for @NegativeOrZero")
@@ -393,10 +394,10 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void size_onList_setsMinItemsAndMaxItems() {
+    void apply_fieldAnnotatedWithSizeOnList_setsMinItemsAndMaxItems() {
         var schemas = schemasFor(SizeListDto.class);
         applier.apply(SizeListDto.class, schemas);
-        Schema<?> prop = prop(schemas, SizeListDto.class, "tags");
+        var prop = prop(schemas, SizeListDto.class, "tags");
         assertAll(
                 () -> assertEquals(1,  prop.getMinItems(), "minItems must be set for @Size on List"),
                 () -> assertEquals(10, prop.getMaxItems(), "maxItems must be set for @Size on List")
@@ -404,10 +405,10 @@ class ValidationSchemaEnricherTest {
     }
 
     @Test
-    void size_onList_doesNotSetStringLengthFields() {
+    void apply_fieldAnnotatedWithSizeOnList_doesNotSetStringLengthFields() {
         var schemas = schemasFor(SizeListDto.class);
         applier.apply(SizeListDto.class, schemas);
-        Schema<?> prop = prop(schemas, SizeListDto.class, "tags");
+        var prop = prop(schemas, SizeListDto.class, "tags");
         assertAll(
                 () -> assertNull(prop.getMinLength(), "minLength must not be set for @Size on List"),
                 () -> assertNull(prop.getMaxLength(), "maxLength must not be set for @Size on List")
@@ -420,7 +421,7 @@ class ValidationSchemaEnricherTest {
 
     @Test
     @SuppressWarnings("rawtypes")
-    void inheritedFields_constraintsApplied() {
+    void apply_classWithInheritedFields_constraintsAppliedToInheritedProperties() {
         Schema<?> childSchema = new Schema<>();
         Map<String, Schema> props = new LinkedHashMap<>();
         props.put("baseField",  new Schema());
@@ -446,7 +447,7 @@ class ValidationSchemaEnricherTest {
     // ==========================================================================
 
     @Test
-    void jsonProperty_usesSerializedNameAsKey() {
+    void apply_fieldWithJsonPropertyAnnotation_usesSerializedNameAsSchemaKey() {
         var schemas = schemasFor(JsonPropertyDto.class);
         applier.apply(JsonPropertyDto.class, schemas);
         Schema<?> prop = (Schema<?>) schemas.get("JsonPropertyDto").getProperties().get("search_offset");
@@ -465,15 +466,21 @@ class ValidationSchemaEnricherTest {
 
     @Test
     void apply_emptySchemas_doesNotThrow() {
-        applier.apply(MinMaxDto.class, new LinkedHashMap<String, Schema<?>>());
+        applier.apply(MinMaxDto.class, new LinkedHashMap<>());
     }
 
     @Test
     void apply_schemaWithNullProperties_doesNotThrow() {
-        Schema<?> schema = new Schema<>(); // properties is null
+        var schema = new Schema<>(); // properties is null
         Map<String, Schema<?>> schemas = new LinkedHashMap<>();
         schemas.put("MinMaxDto", schema);
         applier.apply(MinMaxDto.class, schemas);
+    }
+
+    @Test
+    void apply_nullType_throwsNullPointerException() {
+        assertThrows(NullPointerException.class,
+                () -> applier.apply(null, schemasFor(MinMaxDto.class)));
     }
 
     // ==========================================================================
@@ -482,7 +489,7 @@ class ValidationSchemaEnricherTest {
 
     @Test
     @SuppressWarnings("rawtypes")
-    void nestedType_constraintsAppliedToNestedSchema() {
+    void apply_typeWithNestedComplexField_constraintsAppliedToNestedSchema() {
         // Build schemas for both NestedDto and its inner MinMaxDto
         var schemas = new LinkedHashMap<String, Schema<?>>();
 

@@ -16,9 +16,10 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -59,7 +60,7 @@ class SchemaAnnotationEnricherTest {
     @SuppressWarnings("rawtypes")
     private static Map<String, Schema<?>> schemasFor(Class<?> clazz) {
         Map<String, Schema<?>> schemas = new LinkedHashMap<>();
-        Schema<?> parent = new Schema<>();
+        var parent = new Schema<>();
         Map<String, Schema> props = new LinkedHashMap<>();
         for (var field : clazz.getDeclaredFields()) {
             props.put(field.getName(), new Schema<>());
@@ -79,7 +80,7 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void classLevelDescription_isApplied() {
+    void apply_classWithSchemaDescription_setsDescriptionOnSchema() {
         var schemas = schemasFor(PersonRecord.class);
         enricher.apply(PersonRecord.class, schemas);
         assertEquals("A person record", schemas.get("PersonRecord").getDescription());
@@ -90,7 +91,7 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void classLevelTitle_isApplied() {
+    void apply_classWithSchemaTitle_setsTitleOnSchema() {
         var schemas = schemasFor(PersonRecord.class);
         enricher.apply(PersonRecord.class, schemas);
         assertEquals("PersonSchema", schemas.get("PersonRecord").getTitle());
@@ -101,7 +102,7 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void classLevelDeprecated_isApplied() {
+    void apply_classWithSchemaDeprecatedTrue_setsDeprecatedOnSchema() {
         var schemas = schemasFor(PersonRecord.class);
         enricher.apply(PersonRecord.class, schemas);
         assertTrue(schemas.get("PersonRecord").getDeprecated(),
@@ -113,7 +114,7 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void fieldLevelDescription_isApplied() {
+    void apply_fieldWithSchemaDescription_setsDescriptionOnProperty() {
         var schemas = schemasFor(PersonRecord.class);
         enricher.apply(PersonRecord.class, schemas);
         assertEquals("Full name", prop(schemas, PersonRecord.class, "name").getDescription());
@@ -124,7 +125,7 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void fieldLevelExample_isApplied() {
+    void apply_fieldWithSchemaExample_setsExampleOnProperty() {
         var schemas = schemasFor(PersonRecord.class);
         enricher.apply(PersonRecord.class, schemas);
         assertEquals("Alice", prop(schemas, PersonRecord.class, "name").getExample());
@@ -135,7 +136,7 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void existingDescription_isNotOverwritten() {
+    void apply_existingDescription_isNotOverwritten() {
         var schemas = schemasFor(PersonRecord.class);
         schemas.get("PersonRecord").setDescription("already set");
         enricher.apply(PersonRecord.class, schemas);
@@ -148,13 +149,27 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void noAnnotation_schemasUnchanged() {
+    void apply_classWithoutSchemaAnnotation_descriptionRemainsNull() {
         var schemas = schemasFor(PlainRecord.class);
         enricher.apply(PlainRecord.class, schemas);
-        Schema<?> schema = schemas.get("PlainRecord");
-        assertNull(schema.getDescription(), "No @Schema on PlainRecord — description must stay null");
-        assertNull(schema.getTitle(),       "No @Schema on PlainRecord — title must stay null");
-        assertNull(schema.getDeprecated(),  "No @Schema on PlainRecord — deprecated must stay null");
+        assertNull(schemas.get("PlainRecord").getDescription(),
+                "No @Schema on PlainRecord — description must stay null");
+    }
+
+    @Test
+    void apply_classWithoutSchemaAnnotation_titleRemainsNull() {
+        var schemas = schemasFor(PlainRecord.class);
+        enricher.apply(PlainRecord.class, schemas);
+        assertNull(schemas.get("PlainRecord").getTitle(),
+                "No @Schema on PlainRecord — title must stay null");
+    }
+
+    @Test
+    void apply_classWithoutSchemaAnnotation_deprecatedRemainsNull() {
+        var schemas = schemasFor(PlainRecord.class);
+        enricher.apply(PlainRecord.class, schemas);
+        assertNull(schemas.get("PlainRecord").getDeprecated(),
+                "No @Schema on PlainRecord — deprecated must stay null");
     }
 
     // ==========================================================================
@@ -162,12 +177,22 @@ class SchemaAnnotationEnricherTest {
     // ==========================================================================
 
     @Test
-    void nullSchemas_doesNotThrow() {
+    void apply_nullSchemas_doesNotThrow() {
         assertDoesNotThrow(() -> enricher.apply(PersonRecord.class, null));
     }
 
     @Test
-    void emptySchemas_doesNotThrow() {
+    void apply_emptySchemas_doesNotThrow() {
         assertDoesNotThrow(() -> enricher.apply(PersonRecord.class, new LinkedHashMap<>()));
+    }
+
+    // ==========================================================================
+    // Null type — NullPointerException
+    // ==========================================================================
+
+    @Test
+    void apply_nullType_throwsNullPointerException() {
+        assertThrows(NullPointerException.class,
+                () -> enricher.apply(null, schemasFor(PersonRecord.class)));
     }
 }
