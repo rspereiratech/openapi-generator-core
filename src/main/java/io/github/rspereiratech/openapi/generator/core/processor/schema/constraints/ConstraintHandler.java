@@ -10,7 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.processor.schema.constraints;
 
-import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
+import io.github.rspereiratech.openapi.generator.core.processor.schema.enricher.ValidationSchemaEnricher;
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.lang.annotation.Annotation;

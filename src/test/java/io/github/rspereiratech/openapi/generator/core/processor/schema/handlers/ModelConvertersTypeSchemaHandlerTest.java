@@ -36,8 +36,10 @@ import static org.mockito.Mockito.lenient;
  * Unit tests for {@link ModelConvertersTypeSchemaHandler}.
  *
  * <p>Verifies catch-all schema resolution via Jackson {@code ModelConverters},
- * {@link io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher}
- * integration for propagating Bean Validation constraints, and schema registration
+ * {@link io.github.rspereiratech.openapi.generator.core.processor.schema.enricher.ValidationSchemaEnricher}
+ * integration for propagating Bean Validation constraints,
+ * {@link io.github.rspereiratech.openapi.generator.core.processor.schema.enricher.SchemaAnnotationEnricher}
+ * integration for propagating {@code @Schema} metadata, and schema registration
  * in the component registry.
  */
 @ExtendWith(MockitoExtension.class)
@@ -58,6 +60,12 @@ class ModelConvertersTypeSchemaHandlerTest {
             @Size(min = 1, max = 50) String name,
             @Pattern(regexp = "\\d+") String code,
             @NotNull String required
+    ) {}
+
+    @io.swagger.v3.oas.annotations.media.Schema(description = "A product record")
+    record AnnotatedDto(
+            @io.swagger.v3.oas.annotations.media.Schema(description = "Product name", example = "Widget") String productName,
+            int quantity
     ) {}
 
     @BeforeEach
@@ -197,5 +205,28 @@ class ModelConvertersTypeSchemaHandlerTest {
         assertNotNull(requiredProperty, "required property must be present");
         assertEquals(Boolean.FALSE, requiredProperty.getNullable(),
                 "@NotNull must set nullable = false on the required property");
+    }
+
+    // ==========================================================================
+    // @Schema annotation propagation
+    // ==========================================================================
+
+    @Test
+    void resolve_annotatedDto_classLevelDescriptionApplied() {
+        handler.resolve(AnnotatedDto.class, schemaProcessor);
+        Schema<?> schema = registry.get("AnnotatedDto");
+        assertNotNull(schema, "AnnotatedDto must be in the registry");
+        assertEquals("A product record", schema.getDescription(),
+                "@Schema(description) at class level must be propagated to the schema");
+    }
+
+    @Test
+    void resolve_annotatedDto_fieldLevelDescriptionApplied() {
+        handler.resolve(AnnotatedDto.class, schemaProcessor);
+        @SuppressWarnings("unchecked")
+        Schema<?> prop = (Schema<?>) registry.get("AnnotatedDto").getProperties().get("productName");
+        assertNotNull(prop, "productName property must be present");
+        assertEquals("Product name", prop.getDescription(),
+                "@Schema(description) at field level must be propagated to the property schema");
     }
 }

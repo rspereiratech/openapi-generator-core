@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+- `SchemaEnricher` interface — strategy for enriching OpenAPI component schemas after `ModelConverters` resolution; replaces the former single-enricher coupling in `ModelConvertersTypeSchemaHandler` with a composable, ordered enricher chain
+- `SchemaAnnotationEnricher` — reads `@io.swagger.v3.oas.annotations.media.Schema` at class and field level and propagates `description`, `title`, `example`, and `deprecated` to the resolved schemas; particularly valuable for Java records where `ModelConverters` does not reliably pick up `@Schema` metadata; applies a non-overwriting policy (existing schema values are never replaced)
+- `SchemaEnricherSupport` (package-private) — shared utility class for `SchemaEnricher` implementations; provides `allDeclaredFields`, `collectReachableClasses`, `resolvePropertyName`, and `isJavaBuiltin` helpers extracted from `ValidationSchemaEnricher`
+- `ModelConvertersTypeSchemaHandler(List<SchemaEnricher>)` constructor — accepts a fully custom enricher chain; default no-arg constructor now wires `ValidationSchemaEnricher` followed by `SchemaAnnotationEnricher`
+- `ValidationSchemaEnricher` now implements `SchemaEnricher`; `apply` signature updated to `Map<String, Schema<?>>` (was `Map<String, ?>`)
 - `AbstractConstraintHandler<A extends Annotation>` — generic base class for all `ConstraintHandler` implementations; provides a type-safe `supports()` check and encapsulates the unsafe annotation cast, eliminating the same boilerplate from all 14 concrete handlers
 - `ParameterProcessorImpl`: parameters of an ignored type (e.g. `Locale`) are now included in the spec when the method carries `@Parameter(schema = @Schema(type = "…"))` — the explicit schema annotation overrides the ignore list
 - `DefaultHttpStatusResolver`: status code `"default"` now resolves to the description `"default response"` instead of falling through to the `"Response"` fallback

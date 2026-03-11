@@ -8,7 +8,7 @@
  * MIT License - Copyright (c) 2026 Rui Pereira
  * See LICENSE in the project root for full license information.
  */
-package io.github.rspereiratech.openapi.generator.core.processor.schema;
+package io.github.rspereiratech.openapi.generator.core.processor.schema.enricher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.models.media.Schema;
@@ -465,7 +465,7 @@ class ValidationSchemaEnricherTest {
 
     @Test
     void apply_emptySchemas_doesNotThrow() {
-        applier.apply(MinMaxDto.class, new LinkedHashMap<String, Object>());
+        applier.apply(MinMaxDto.class, new LinkedHashMap<String, Schema<?>>());
     }
 
     @Test

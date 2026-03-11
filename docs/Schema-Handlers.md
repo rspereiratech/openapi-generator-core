@@ -96,7 +96,14 @@ When used as a method parameter (via `ParameterProcessorImpl`), the result is a 
 
 Delegates to Swagger's `ModelConverters`, which resolves Java types to OpenAPI schemas via reflection. This handles all standard DTO classes, enums, collections, maps, and primitives.
 
-After resolution, `ValidationSchemaEnricher` is invoked to propagate Jakarta Bean Validation constraints (e.g. `@Min`, `@Size`, `@NotBlank`) from field annotations to the corresponding schema properties. See [Architecture](Architecture.md#validationschemaenricher) for details.
+After resolution, a configurable chain of [`SchemaEnricher`](../src/main/java/io/github/rspereiratech/openapi/generator/core/processor/schema/enricher/SchemaEnricher.java) implementations is applied in order. The default chain is:
+
+1. **`ValidationSchemaEnricher`** — propagates Jakarta Bean Validation constraints (e.g. `@Min`, `@Size`, `@NotBlank`) from field annotations to the corresponding schema properties. See [Architecture](Architecture.md#validationschemaenricher) for details.
+2. **`SchemaAnnotationEnricher`** — reads `@io.swagger.v3.oas.annotations.media.Schema` annotations at class and field level and sets `description`, `title`, `example`, and `deprecated` on the matching schemas. This is particularly important for Java records, where `ModelConverters` may not reliably pick up `@Schema` metadata.
+
+Enrichers apply a **non-overwriting policy**: if a schema already has a value for a given attribute, the enricher skips it.
+
+A custom enricher list can be supplied via `ModelConvertersTypeSchemaHandler(List<SchemaEnricher>)`. See [Extension Points](Extension-Points.md#5-custom-schema-enricher) for details.
 
 Schemas generated here are registered in the shared schema registry and later merged into `components/schemas` by the `SchemaRegistryMergePostProcessor`.
 

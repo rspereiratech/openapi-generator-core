@@ -11,8 +11,10 @@
 package io.github.rspereiratech.openapi.generator.core.processor.schema.handlers;
 
 import com.google.common.base.Preconditions;
-import io.github.rspereiratech.openapi.generator.core.processor.schema.ValidationSchemaEnricher;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
+import io.github.rspereiratech.openapi.generator.core.processor.schema.enricher.SchemaAnnotationEnricher;
+import io.github.rspereiratech.openapi.generator.core.processor.schema.enricher.SchemaEnricher;
+import io.github.rspereiratech.openapi.generator.core.processor.schema.enricher.ValidationSchemaEnricher;
 import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.core.converter.ResolvedSchema;
@@ -20,6 +22,8 @@ import io.swagger.v3.oas.models.media.Schema;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Catch-all {@link TypeSchemaHandler} that delegates to Swagger's
@@ -30,35 +34,52 @@ import java.lang.reflect.Type;
  *
  * <p>Any referenced component schemas discovered during resolution are registered
  * in the schema registry via {@link SchemaProcessor#getSchemaRegistry()}.
- * Bean Validation constraints are then propagated to those schemas via the
- * supplied {@link ValidationSchemaEnricher}.
+ * A configurable chain of {@link SchemaEnricher}s is then applied to those schemas
+ * in order. The default chain consists of:
+ * <ol>
+ *   <li>{@link ValidationSchemaEnricher} — propagates Jakarta Bean Validation constraints</li>
+ *   <li>{@link SchemaAnnotationEnricher} — propagates {@code @Schema} metadata
+ *       (description, title, example, deprecated)</li>
+ * </ol>
+ *
+ * <p>A custom enricher list can be supplied via
+ * {@link #ModelConvertersTypeSchemaHandler(List)} for full control over enrichment
+ * behaviour (e.g. adding Hibernate Validator support).
  *
  * @author ruispereira
+ * @see SchemaEnricher
+ * @see ValidationSchemaEnricher
+ * @see SchemaAnnotationEnricher
  */
 @Slf4j
 @SuppressWarnings("java:S1452")
 public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
 
-    /** Propagates Bean Validation constraints to the resolved schemas. */
-    private final ValidationSchemaEnricher constraintApplier;
+    /** Ordered chain of enrichers applied to resolved schemas. */
+    private final List<SchemaEnricher> enrichers;
 
     /**
-     * Creates an instance with the default {@link ValidationSchemaEnricher}.
+     * Creates an instance with the default enricher chain:
+     * {@link ValidationSchemaEnricher} followed by {@link SchemaAnnotationEnricher}.
      */
     public ModelConvertersTypeSchemaHandler() {
-        this(new ValidationSchemaEnricher());
+        this(List.of(new ValidationSchemaEnricher(), new SchemaAnnotationEnricher()));
     }
 
     /**
-     * Creates an instance with a custom {@link ValidationSchemaEnricher}.
+     * Creates an instance with a custom enricher chain.
      *
-     * @param enricher the enricher to use for Bean Validation propagation;
-     *                 must not be {@code null}
-     * @throws NullPointerException if {@code enricher} is {@code null}
+     * <p>Enrichers are applied in list order; each enricher sees the schemas as
+     * already mutated by the previous ones.
+     *
+     * @param enrichers ordered list of schema enrichers; must not be {@code null} or empty
+     * @throws NullPointerException     if {@code enrichers} is {@code null}
+     * @throws IllegalArgumentException if {@code enrichers} is empty
      */
-    public ModelConvertersTypeSchemaHandler(ValidationSchemaEnricher enricher) {
-        Preconditions.checkNotNull(enricher, "'enricher' must not be null");
-        this.constraintApplier = enricher;
+    public ModelConvertersTypeSchemaHandler(List<SchemaEnricher> enrichers) {
+        Preconditions.checkNotNull(enrichers, "'enrichers' must not be null");
+        Preconditions.checkArgument(!enrichers.isEmpty(), "'enrichers' must not be empty");
+        this.enrichers = List.copyOf(enrichers);
     }
 
     @Override
@@ -79,8 +100,10 @@ public class ModelConvertersTypeSchemaHandler implements TypeSchemaHandler {
             }
 
             if (resolved.referencedSchemas != null) {
-                constraintApplier.apply(type, resolved.referencedSchemas);
-                resolved.referencedSchemas.forEach((name, schema) ->
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                Map<String, Schema<?>> referencedSchemas = (Map<String, Schema<?>>) (Map<String, ?>) resolved.referencedSchemas;
+                enrichers.forEach(e -> e.apply(type, referencedSchemas));
+                referencedSchemas.forEach((name, schema) ->
                         schemaProcessor.getSchemaRegistry().merge(
                                 name, schema, (existing, incoming) -> existing));
             }

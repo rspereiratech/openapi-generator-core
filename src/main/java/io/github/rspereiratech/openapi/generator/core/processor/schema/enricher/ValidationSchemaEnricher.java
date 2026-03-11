@@ -8,9 +8,8 @@
  * MIT License - Copyright (c) 2026 Rui Pereira
  * See LICENSE in the project root for full license information.
  */
-package io.github.rspereiratech.openapi.generator.core.processor.schema;
+package io.github.rspereiratech.openapi.generator.core.processor.schema.enricher;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.ConstraintHandler;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.DecimalMaxConstraintHandler;
@@ -27,20 +26,15 @@ import io.github.rspereiratech.openapi.generator.core.processor.schema.constrain
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.PositiveConstraintHandler;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.PositiveOrZeroConstraintHandler;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.SizeConstraintHandler;
-import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * Propagates Jakarta Bean Validation constraints to the corresponding
@@ -82,7 +76,7 @@ import java.util.stream.Stream;
  * @author ruispereira
  * @see ConstraintHandler
  */
-public class ValidationSchemaEnricher {
+public class ValidationSchemaEnricher implements SchemaEnricher {
 
     /** Ordered chain of handlers consulted in sequence; the first match wins. */
     private final List<ConstraintHandler> handlers;
@@ -139,14 +133,14 @@ public class ValidationSchemaEnricher {
      * <p>Does nothing when {@code schemas} is {@code null} or empty.
      *
      * @param type    the root type to start class traversal from; must not be {@code null}
-     * @param schemas the mutable map of schema name → schema produced by {@code ModelConverters};
-     *                must be a {@code Map<String, Schema>} at runtime (unchecked cast applied)
+     * @param schemas the mutable map of schema name → schema produced by {@code ModelConverters}
      */
-    @SuppressWarnings({"java:S1452", "unchecked"})
-    public void apply(Type type, Map<String, ?> schemas) {
+    @Override
+    @SuppressWarnings("java:S1452")
+    public void apply(Type type, Map<String, Schema<?>> schemas) {
         if (schemas == null || schemas.isEmpty()) return;
 
-        collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
+        SchemaEnricherSupport.collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
             if (!(schemas.get(clazz.getSimpleName()) instanceof Schema<?> schema)) return;
             if (schema.getProperties() == null) return;
             applyConstraintsFromClass(clazz, schema);
@@ -161,10 +155,11 @@ public class ValidationSchemaEnricher {
      * Applies all Jakarta Bean Validation constraints declared on the fields of {@code clazz}
      * to the matching properties in {@code schema}.
      *
-     * <p>For each field, the property name is resolved via {@link #resolvePropertyName} and
-     * looked up in {@code schema}'s property map. Fields whose name does not match an existing
-     * schema property are silently skipped. Each annotation on a matched field is then
-     * dispatched to {@link #applyConstraint}.
+     * <p>For each field, the property name is resolved via
+     * {@link SchemaEnricherSupport#resolvePropertyName} and looked up in {@code schema}'s
+     * property map. Fields whose name does not match an existing schema property are silently
+     * skipped. Each annotation on a matched field is then dispatched to
+     * {@link #applyConstraint}.
      *
      * @param clazz  the class whose fields are inspected; must not be {@code null}
      * @param schema the OpenAPI schema whose properties are mutated; must not be {@code null}
@@ -173,8 +168,8 @@ public class ValidationSchemaEnricher {
     private void applyConstraintsFromClass(Class<?> clazz, Schema<?> schema) {
         Map<String, ?> properties = schema.getProperties();
 
-        allDeclaredFields(clazz).forEach(field -> {
-            if (!(properties.get(resolvePropertyName(field)) instanceof Schema<?> property)) return;
+        SchemaEnricherSupport.allDeclaredFields(clazz).forEach(field -> {
+            if (!(properties.get(SchemaEnricherSupport.resolvePropertyName(field)) instanceof Schema<?> property)) return;
             Arrays.stream(field.getAnnotations())
                     .forEach(ann -> applyConstraint(ann, field.getGenericType(), property));
         });
@@ -194,100 +189,5 @@ public class ValidationSchemaEnricher {
                 .filter(h -> h.supports(annotation))
                 .findFirst()
                 .ifPresent(h -> h.apply(annotation, fieldType, property));
-    }
-
-    // ------------------------------------------------------------------
-    // Property name resolution
-    // ------------------------------------------------------------------
-
-    /**
-     * Resolves the JSON property name for a field.
-     *
-     * <p>Uses the value declared on {@link JsonProperty} when present and explicit;
-     * falls back to the field's declared name otherwise. The {@link JsonProperty} value
-     * is considered explicit when it is non-empty and not equal to
-     * {@link JsonProperty#USE_DEFAULT_NAME}.
-     *
-     * @param field the field to resolve the name for; must not be {@code null}
-     * @return the serialised property name; never {@code null}
-     */
-    private static String resolvePropertyName(Field field) {
-        return Optional.ofNullable(field.getAnnotation(JsonProperty.class))
-                .map(JsonProperty::value)
-                .filter(v -> !v.isEmpty() && !JsonProperty.USE_DEFAULT_NAME.equals(v))
-                .orElseGet(field::getName);
-    }
-
-    // ------------------------------------------------------------------
-    // Field traversal
-    // ------------------------------------------------------------------
-
-    /**
-     * Returns all non-static, non-synthetic declared fields of {@code clazz} and every
-     * class in its superclass chain, up to (but not including) {@link Object}.
-     *
-     * <p>Fields are ordered from the most-derived class down to the root, matching the
-     * natural declaration order within each class. Static and synthetic fields (e.g.
-     * compiler-generated members in inner classes) are excluded.
-     *
-     * @param clazz the class to inspect; must not be {@code null}
-     * @return unmodifiable list of eligible instance fields in hierarchy order
-     */
-    private static List<Field> allDeclaredFields(Class<?> clazz) {
-        return Stream.<Class<?>>iterate(clazz, c -> c != null && c != Object.class, Class::getSuperclass)
-                .flatMap(c -> Arrays.stream(c.getDeclaredFields()))
-                .filter(f -> !Modifier.isStatic(f.getModifiers()) && !f.isSynthetic())
-                .toList();
-    }
-
-    // ------------------------------------------------------------------
-    // Class traversal
-    // ------------------------------------------------------------------
-
-    /**
-     * Collects all user-defined classes reachable from {@code type} by recursively walking
-     * the non-static, non-synthetic declared fields of each discovered class across its full
-     * superclass hierarchy.
-     *
-     * <p>A class is skipped — and its fields are not traversed — when any of the following
-     * conditions holds:
-     * <ul>
-     *   <li>The type cannot be reduced to a raw {@link Class} (e.g. wildcards, type variables).</li>
-     *   <li>The class is a primitive type.</li>
-     *   <li>The class belongs to the Java platform ({@link #isJavaBuiltin}).</li>
-     *   <li>The class has already been added to {@code visited} (cycle guard).</li>
-     * </ul>
-     *
-     * @param type    the type to start from; may be a plain {@link Class} or a
-     *                {@link java.lang.reflect.ParameterizedType}
-     * @param visited mutable accumulator; classes are added here as they are discovered —
-     *                also acts as a cycle guard so the same class is never traversed twice
-     * @return {@code visited} (the same instance), enriched with all newly discovered classes
-     */
-    private static Set<Class<?>> collectReachableClasses(Type type, Set<Class<?>> visited) {
-        Class<?> clazz = TypeUtils.toRawClass(type);
-        if (clazz == null || clazz.isPrimitive() || isJavaBuiltin(clazz) || !visited.add(clazz)) {
-            return visited;
-        }
-
-        allDeclaredFields(clazz)
-                .forEach(field -> collectReachableClasses(field.getGenericType(), visited));
-
-        return visited;
-    }
-
-    /**
-     * Returns {@code true} if {@code clazz} belongs to the Java platform itself and
-     * should be excluded from constraint traversal.
-     *
-     * <p>Matches classes whose package starts with {@code "java."} or {@code "javax."},
-     * and anonymous / local classes that have no package name.</p>
-     *
-     * @param clazz the class to test; must not be {@code null}
-     * @return {@code true} if the class is a Java built-in and should be skipped
-     */
-    private static boolean isJavaBuiltin(Class<?> clazz) {
-        String pkg = clazz.getPackageName();
-        return pkg.startsWith("java.") || pkg.startsWith("javax.") || pkg.isEmpty();
     }
 }

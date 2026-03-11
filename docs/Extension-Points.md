@@ -148,9 +148,9 @@ public class LengthConstraintHandler implements ConstraintHandler {
 }
 ```
 
-### Wire into the enricher
+### Wire into the enricher chain
 
-Build a list that includes the standard handlers plus your custom one, and pass it to `ValidationSchemaEnricher`. The standard handlers must be listed explicitly — there is no static convenience factory:
+Build a `ValidationSchemaEnricher` with the standard handlers plus your custom one. Then pass a custom enricher list to `ModelConvertersTypeSchemaHandler`. The standard handlers must be listed explicitly:
 
 ```java
 List<ConstraintHandler> handlers = new ArrayList<>(List.of(
@@ -171,23 +171,19 @@ List<ConstraintHandler> handlers = new ArrayList<>(List.of(
     new LengthConstraintHandler()   // custom
 ));
 
-ValidationSchemaEnricher enricher = new ValidationSchemaEnricher(handlers);
-```
-
-Then supply the enricher to `ModelConvertersTypeSchemaHandler` and wire it via a custom `ProcessorFactory`:
-
-```java
 public class MyProcessorFactory extends DefaultProcessorFactory {
 
     @Override
     public SchemaProcessor createSchemaProcessor() {
-        ValidationSchemaEnricher enricher = new ValidationSchemaEnricher(handlers);
         return new SchemaProcessorImpl(List.of(
             new VoidTypeSchemaHandler(),
             new FluxTypeSchemaHandler(),
             new PageTypeSchemaHandler(),
             new PageableTypeSchemaHandler(),
-            new ModelConvertersTypeSchemaHandler(enricher)
+            new ModelConvertersTypeSchemaHandler(List.of(
+                new ValidationSchemaEnricher(handlers),
+                new SchemaAnnotationEnricher()
+            ))
         ));
     }
 }
@@ -195,7 +191,54 @@ public class MyProcessorFactory extends DefaultProcessorFactory {
 
 ---
 
-## 5. Custom HTTP Status Resolver
+## 5. Custom Schema Enricher
+
+`ModelConvertersTypeSchemaHandler` applies a chain of `SchemaEnricher` implementations after `ModelConverters` resolution. Each enricher mutates the resolved schemas in-place. Implement `SchemaEnricher` to add enrichment behaviour beyond the built-in constraint and annotation propagation.
+
+### Implement `SchemaEnricher`
+
+```java
+public class NullableByDefaultEnricher implements SchemaEnricher {
+
+    @Override
+    public void apply(Type type, Map<String, Schema<?>> schemas) {
+        schemas.values().forEach(schema -> {
+            if (schema.getProperties() == null) return;
+            schema.getProperties().values().forEach(prop -> {
+                if (prop.getNullable() == null) prop.setNullable(true);
+            });
+        });
+    }
+}
+```
+
+### Wire into the handler
+
+Pass your enricher list to `ModelConvertersTypeSchemaHandler`. Include the built-in enrichers explicitly so they still run:
+
+```java
+public class MyProcessorFactory extends DefaultProcessorFactory {
+
+    @Override
+    public SchemaProcessor createSchemaProcessor() {
+        return new SchemaProcessorImpl(List.of(
+            new VoidTypeSchemaHandler(),
+            new FluxTypeSchemaHandler(),
+            new PageTypeSchemaHandler(),
+            new PageableTypeSchemaHandler(),
+            new ModelConvertersTypeSchemaHandler(List.of(
+                new ValidationSchemaEnricher(),
+                new SchemaAnnotationEnricher(),
+                new NullableByDefaultEnricher()   // custom
+            ))
+        ));
+    }
+}
+```
+
+---
+
+## 6. Custom HTTP Status Resolver
 
 The `DefaultHttpStatusResolver` resolves HTTP status codes from `@ResponseStatus` or HTTP method defaults. To change this behaviour, implement `HttpStatusResolver`:
 
