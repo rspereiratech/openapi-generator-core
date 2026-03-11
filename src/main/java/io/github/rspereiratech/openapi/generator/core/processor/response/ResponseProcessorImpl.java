@@ -253,26 +253,41 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private Schema<?> composedSchemaFromAnnotation(Annotation contentAnn) {
         return AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
                 .flatMap(ResponseProcessorImpl::readSchemaComposition)
-                .map(sc -> {
-                    List<Schema<?>> oneOfSchemas = toSchemaList(sc.oneOf());
-                    List<Schema<?>> allOfSchemas = toSchemaList(sc.allOf());
-                    List<Schema<?>> anyOfSchemas = toSchemaList(sc.anyOf());
-                    String       type         = sc.type();
-
-                    if (oneOfSchemas.isEmpty() && allOfSchemas.isEmpty()
-                            && anyOfSchemas.isEmpty() && type.isBlank()) {
-                        return (Schema<?>) null;
-                    }
-
-                    @SuppressWarnings({"unchecked", "rawtypes"})
-                    Schema<?> composed = new Schema<>();
-                    if (!oneOfSchemas.isEmpty()) composed.setOneOf((List) oneOfSchemas);
-                    if (!allOfSchemas.isEmpty()) composed.setAllOf((List) allOfSchemas);
-                    if (!anyOfSchemas.isEmpty()) composed.setAnyOf((List) anyOfSchemas);
-                    if (!type.isBlank())         composed.setType(type);
-                    return composed;
-                })
+                .flatMap(this::buildComposedSchema)
                 .orElse(null);
+    }
+
+    /**
+     * Builds an OpenAPI composed schema ({@code oneOf}/{@code allOf}/{@code anyOf}/{@code type})
+     * from a resolved {@link SchemaComposition}.
+     *
+     * <p>Returns {@link Optional#empty()} when all composition arrays are empty and {@code type}
+     * is blank — i.e., when there is nothing to compose.
+     *
+     * <p>The raw {@code (List)} casts are required because {@link Schema#setOneOf},
+     * {@link Schema#setAllOf}, and {@link Schema#setAnyOf} accept {@code List<Schema>} (raw type)
+     * in the Swagger Core API; the wildcard {@code List<Schema<?>>} is not assignable to it
+     * without an unchecked cast.
+     *
+     * @param sc the resolved schema composition; must not be {@code null}
+     * @return an {@link Optional} wrapping the composed schema, or empty if nothing to compose
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Optional<Schema<?>> buildComposedSchema(SchemaComposition sc) {
+        var oneOf = toSchemaList(sc.oneOf());
+        var allOf = toSchemaList(sc.allOf());
+        var anyOf = toSchemaList(sc.anyOf());
+
+        if (oneOf.isEmpty() && allOf.isEmpty() && anyOf.isEmpty() && sc.type().isBlank()) {
+            return Optional.empty();
+        }
+
+        Schema<?> composed = new Schema<>();
+        if (!oneOf.isEmpty()) composed.setOneOf((List) oneOf);
+        if (!allOf.isEmpty()) composed.setAllOf((List) allOf);
+        if (!anyOf.isEmpty()) composed.setAnyOf((List) anyOf);
+        if (!sc.type().isBlank()) composed.setType(sc.type());
+        return Optional.of(composed);
     }
 
     /** Maps an array of classes to resolved {@link Schema} objects, skipping {@link Void} and nulls. */
