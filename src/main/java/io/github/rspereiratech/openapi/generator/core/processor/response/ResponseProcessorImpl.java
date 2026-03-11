@@ -264,15 +264,9 @@ public class ResponseProcessorImpl implements ResponseProcessor {
      * <p>Returns {@link Optional#empty()} when all composition arrays are empty and {@code type}
      * is blank — i.e., when there is nothing to compose.
      *
-     * <p>The raw {@code (List)} casts are required because {@link Schema#setOneOf},
-     * {@link Schema#setAllOf}, and {@link Schema#setAnyOf} accept {@code List<Schema>} (raw type)
-     * in the Swagger Core API; the wildcard {@code List<Schema<?>>} is not assignable to it
-     * without an unchecked cast.
-     *
      * @param sc the resolved schema composition; must not be {@code null}
      * @return an {@link Optional} wrapping the composed schema, or empty if nothing to compose
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
     private Optional<Schema<?>> buildComposedSchema(SchemaComposition sc) {
         var oneOf = toSchemaList(sc.oneOf());
         var allOf = toSchemaList(sc.allOf());
@@ -283,20 +277,31 @@ public class ResponseProcessorImpl implements ResponseProcessor {
         }
 
         Schema<?> composed = new Schema<>();
-        if (!oneOf.isEmpty()) composed.setOneOf((List) oneOf);
-        if (!allOf.isEmpty()) composed.setAllOf((List) allOf);
-        if (!anyOf.isEmpty()) composed.setAnyOf((List) anyOf);
+        if (!oneOf.isEmpty()) composed.setOneOf(oneOf);
+        if (!allOf.isEmpty()) composed.setAllOf(allOf);
+        if (!anyOf.isEmpty()) composed.setAnyOf(anyOf);
         if (!sc.type().isBlank()) composed.setType(sc.type());
         return Optional.of(composed);
     }
 
-    /** Maps an array of classes to resolved {@link Schema} objects, skipping {@link Void} and nulls. */
-    private List<Schema<?>> toSchemaList(Class<?>[] classes) {
+    /**
+     * Maps an array of classes to resolved raw {@link Schema} objects, skipping {@link Void}
+     * and unresolvable types.
+     *
+     * <p>Returns {@code List<Schema>} — the raw type — to match the signature expected by
+     * {@link Schema#setOneOf}, {@link Schema#setAllOf}, and {@link Schema#setAnyOf} in the
+     * Swagger Core API, avoiding any cast at the call site.
+     *
+     * @param classes the array of implementation classes to resolve
+     * @return list of resolved schemas; never {@code null}, may be empty
+     */
+    @SuppressWarnings("rawtypes") // Schema raw type matches the Swagger Core setOneOf/setAllOf/setAnyOf API
+    private List<Schema> toSchemaList(Class<?>[] classes) {
         return Arrays.stream(classes)
                 .filter(c -> c != Void.class)
                 .map(schemaProcessor::toSchema)
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
