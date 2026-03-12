@@ -17,6 +17,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -164,6 +165,27 @@ public final class AnnotationAttributeUtils {
             Annotation annotation, String attributeName) {
         Object raw = invokeAttribute(annotation, attributeName);
         return raw instanceof Class<?> c ? Optional.of(c) : Optional.empty();
+    }
+
+    /**
+     * Applies {@code parser} to {@code value} and returns the result wrapped in an
+     * {@link Optional}, or {@link Optional#empty()} if the parser throws a
+     * {@link RuntimeException} (e.g. {@link NumberFormatException}).
+     *
+     * <p>Typical use: safely parsing numeric annotation attributes whose string
+     * representation may be invalid.
+     *
+     * @param value  the string to parse; must not be {@code null}
+     * @param parser a function that converts the string to {@code T}; must not be {@code null}
+     * @param <T>    the target type
+     * @return the parsed value, or empty if the parser threw
+     */
+    public static <T> Optional<T> tryParse(String value, Function<String, T> parser) {
+        try {
+            return Optional.of(parser.apply(value));
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
     }
 
     // ------------------------------------------------------------------

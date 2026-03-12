@@ -21,6 +21,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -318,5 +319,37 @@ class AnnotationAttributeUtilsTest {
         // "nested" is an Annotation, not a Class<?>
         var result = AnnotationAttributeUtils.getClassAttribute(ann, "nested");
         Assertions.assertTrue(result.isEmpty(), "Annotation attribute must not be returned as Class<?>");
+    }
+
+    // ==========================================================================
+    // tryParse
+    // ==========================================================================
+
+    @Test
+    void tryParse_validInput_returnsParsedValue() {
+        var result = AnnotationAttributeUtils.tryParse("123.45", BigDecimal::new);
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(new BigDecimal("123.45"), result.get());
+    }
+
+    @Test
+    void tryParse_invalidInput_returnsEmpty() {
+        var result = AnnotationAttributeUtils.tryParse("not-a-number", BigDecimal::new);
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void tryParse_parserThrowsRuntimeException_returnsEmpty() {
+        var result = AnnotationAttributeUtils.tryParse("x", value -> {
+            throw new IllegalArgumentException("bad value");
+        });
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void tryParse_zero_returnsParsedValue() {
+        var result = AnnotationAttributeUtils.tryParse("0", BigDecimal::new);
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(BigDecimal.ZERO, result.get().stripTrailingZeros());
     }
 }
