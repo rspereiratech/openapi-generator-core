@@ -97,13 +97,32 @@ Converts a single controller method into an OpenAPI `Operation`. Collects:
 
 Builds the `parameters` list for an operation. Handles:
 
-| Spring Annotation | OpenAPI `in` |
+| Source | OpenAPI `in` |
 |---|---|
 | `@PathVariable` | `path` |
 | `@RequestParam` | `query` |
 | `@RequestHeader` | `header` |
 | `@CookieValue` | `cookie` |
 | `Pageable` / `PageRequest` | Single `query` parameter with a `$ref` to the `Pageable` schema |
+| Method-level `@Parameter` / `@Parameters` | Virtual parameters — any `in` value |
+
+**Virtual parameters** are `@Parameter` or `@Parameters` annotations placed at the method level (not bound to a specific Java parameter). They are appended after the concrete parameters and deduplicated by name — a concrete parameter always wins when its name matches a virtual one.
+
+This pattern is used to document pagination when the `Pageable` argument itself is hidden from the spec:
+
+```java
+@Parameters({
+    @Parameter(name = "page", in = ParameterIn.QUERY, ...),
+    @Parameter(name = "size", in = ParameterIn.QUERY, ...),
+    @Parameter(name = "sort", in = ParameterIn.QUERY, ...)
+})
+@GetMapping("/search")
+public Page<ProductDto> search(
+        @RequestParam(required = false) String category,
+        @Parameter(hidden = true) Pageable pageable) { ... }
+```
+
+`@Parameter(hidden = true)` annotations are always omitted, whether on a Java method parameter or at method level.
 
 ---
 

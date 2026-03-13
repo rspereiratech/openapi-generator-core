@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `ValidationSchemaEnricher` now implements `SchemaEnricher`; `apply` signature updated to `Map<String, Schema<?>>` (was `Map<String, ?>`)
 - `AbstractConstraintHandler<A extends Annotation>` — generic base class for all `ConstraintHandler` implementations; provides a type-safe `supports()` check and encapsulates the unsafe annotation cast, eliminating the same boilerplate from all 14 concrete handlers
 - `ParameterProcessorImpl`: parameters of an ignored type (e.g. `Locale`) are now included in the spec when the method carries `@Parameter(schema = @Schema(type = "…"))` — the explicit schema annotation overrides the ignore list
+- `ParameterProcessorImpl`: support for method-level `@Parameter` and `@Parameters` annotations as *virtual parameters* — annotations placed at the method level (not bound to a Java method argument) are collected, deduplicated by name (concrete parameters win on clash), and appended to the operation's parameter list; `hidden = true` virtual parameters are always omitted; supports all `in` values (`query`, `path`, `header`, `cookie`); particularly useful for documenting pagination when `Pageable` is hidden from the spec
+- `AnnotationAttributeUtils`: added `getEnumName(Annotation, String)` — reads an `Enum`-typed annotation attribute and returns the constant name as a `String`; classloader-safe (avoids casting across `URLClassLoader` boundaries)
 - `DefaultHttpStatusResolver`: status code `"default"` now resolves to the description `"default response"` instead of falling through to the `"Response"` fallback
 
 ### Fixed

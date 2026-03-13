@@ -83,14 +83,22 @@ START
 │ Pageable        │  ┌────────────────────┐│      │
 │  → query param  │  │  SchemaProcessor   ││      │
 │   ($ref Pageable│  │  (chain of resp.)  ││      │
-└─────────────────┘  │                    ││      │
-                     │  void/Void → null  ││      │
-       ▼             │  Flux<T> → array   ││      │
-┌─────────────────┐  │  Page<T> → paged  ││      │
-│RequestBodyProc. │  │  Pageable → params ││      │
-│                 │  │  other → Model     ││      │
-│ @RequestBody    │  │         Converters ││      │
-│  → request body │  └────────────────────┘│      │
+│                 │  │                    ││      │
+│ @Parameter /    │  │  void/Void → null  ││      │
+│ @Parameters     │  │  Flux<T> → array   ││      │
+│  (method-level) │  │  Page<T> → paged   ││      │
+│  → virtual      │  │  Pageable → params ││      │
+│    params       │  │  other → Model     ││      │
+│    (concrete    │  │         Converters ││      │
+│    wins on name │  └────────────────────┘│      │
+│    clash)       │                        │      │
+└─────────────────┘                        │      │
+       ▼                                   │      │
+┌─────────────────┐                        │      │
+│RequestBodyProc. │                        │      │
+│                 │                        │      │
+│ @RequestBody    │                        │      │
+│  → request body │                        │      │
 │    schema ref   │                        │      │
 └─────────────────┘                        │      │
                │                           │      │
