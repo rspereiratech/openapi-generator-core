@@ -99,7 +99,14 @@ Delegates to Swagger's `ModelConverters`, which resolves Java types to OpenAPI s
 After resolution, a configurable chain of [`SchemaEnricher`](../src/main/java/io/github/rspereiratech/openapi/generator/core/processor/schema/enricher/SchemaEnricher.java) implementations is applied in order. The default chain is:
 
 1. **`ValidationSchemaEnricher`** — propagates Jakarta Bean Validation constraints (e.g. `@Min`, `@Size`, `@NotBlank`) from field annotations to the corresponding schema properties. See [Architecture](Architecture.md#validationschemaenricher) for details.
-2. **`SchemaAnnotationEnricher`** — reads `@io.swagger.v3.oas.annotations.media.Schema` annotations at class and field level and sets `description`, `title`, `example`, and `deprecated` on the matching schemas. This is particularly important for Java records, where `ModelConverters` may not reliably pick up `@Schema` metadata.
+2. **`SchemaAnnotationEnricher`** — reads `@io.swagger.v3.oas.annotations.media.Schema` annotations at class and field level. This is particularly important for Java records, where `ModelConverters` may not reliably pick up `@Schema` metadata. Supported attributes:
+
+   | Scope | Attributes |
+   |-------|-----------|
+   | **Class-level** | `description`, `title`, `format`, `example`, `defaultValue`, `nullable`, `readOnly`, `writeOnly`, `accessMode`, `deprecated`, `externalDocs` |
+   | **Field-level** | all class-level attributes, plus `pattern`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `minLength`, `maxLength`, `minProperties`, `maxProperties`, `multipleOf`, `allowableValues` (→ `enum`), `hidden` (removes the property from the schema entirely) |
+
+   Attributes intentionally not handled — already managed by `ModelConverters` or other processors: `implementation`, `ref`, `name`, `allOf`/`anyOf`/`oneOf`/`not`, `subTypes`, `discriminatorProperty`, `requiredProperties`.
 
 Enrichers apply a **non-overwriting policy**: if a schema already has a value for a given attribute, the enricher skips it.
 
