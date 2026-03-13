@@ -40,12 +40,15 @@ import java.util.stream.Stream;
  *
  * <p>Builds {@link ApiResponses} for a controller method.
  *
- * <p>Resolution order:
+ * <p>Content resolution rules (applied per {@code @ApiResponse}):
  * <ol>
- *   <li>Explicit {@code @io.swagger.v3.oas.annotations.responses.ApiResponse} annotations.</li>
- *   <li>HTTP status inferred from {@code @ResponseStatus}.</li>
- *   <li>HTTP status inferred from the HTTP method (POST → 201, others → 200).</li>
- *   <li>Response schema derived from the method's return type.</li>
+ *   <li><b>Explicit content declared</b> ({@code @Content} with schema hints) → used as-is.</li>
+ *   <li><b>2xx without content</b> (no {@code content} attribute, or empty {@code @Content}) →
+ *       schema inferred from the method's return type.</li>
+ *   <li><b>4xx/5xx without content</b> → no response body.</li>
+ *   <li><b>No {@code @ApiResponse} at all</b> → status code resolved via
+ *       {@link io.github.rspereiratech.openapi.generator.core.processor.response.resolver.HttpStatusResolver};
+ *       schema inferred from return type (void return produces 204 with no body).</li>
  * </ol>
  *
  * <p>HTTP status-code resolution is delegated to an {@link HttpStatusResolver} strategy,
@@ -174,28 +177,60 @@ public class ResponseProcessorImpl implements ResponseProcessor {
 
         ApiResponse response = new ApiResponse().description(description);
 
-        Optional.ofNullable(resolveContent(ann, method, typeVarMap))
+        Optional.ofNullable(resolveContent(ann, responseCode, method, typeVarMap))
                 .ifPresent(response::setContent);
 
         responses.addApiResponse(responseCode, response);
     }
 
     /**
-     * Resolves the {@link Content} for a Swagger {@code @ApiResponse} annotation.
+     * Resolves the {@link Content} for a Swagger {@code @ApiResponse} annotation,
+     * applying the content-inference rules based on the response code:
      *
-     * <p>Attempts to read the {@code content} attribute from the annotation; falls back to
-     * the method's return type if the attribute is absent, empty, or unreadable.</p>
+     * <ul>
+     *   <li>If the annotation carries {@code @Content} with schema hints → used as-is (Rule 1).</li>
+     *   <li>If the annotation has no {@code content} attribute, or carries an empty {@code @Content},
+     *       and the response code is 2xx → schema is inferred from the method's return type (Rule 2).</li>
+     *   <li>If the response code is 4xx/5xx and no schema hints are present → no body (Rule 3).</li>
+     * </ul>
      *
-     * @param ann        the Swagger {@code @ApiResponse} annotation; must not be {@code null}
-     * @param method     the controller method; used for return-type fallback
-     * @param typeVarMap type-variable mappings for generic type resolution
-     * @return the resolved {@link Content}, or {@code null} if the return type yields no schema
+     * @param ann          the Swagger {@code @ApiResponse} annotation; must not be {@code null}
+     * @param responseCode the HTTP response code string (e.g. {@code "200"}, {@code "404"})
+     * @param method       the controller method; used for return-type inference
+     * @param typeVarMap   type-variable mappings for generic type resolution
+     * @return the resolved {@link Content}, or {@code null} if no body applies
      */
-    private Content resolveContent(Annotation ann, Method method, Map<TypeVariable<?>, Type> typeVarMap) {
+    private Content resolveContent(Annotation ann, String responseCode, Method method,
+                                    Map<TypeVariable<?>, Type> typeVarMap) {
         List<Annotation> contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "content");
-        return !contentArr.isEmpty()
-                ? buildContentFromAnnotation(contentArr.getFirst(), method, typeVarMap)
-                : buildContentFromReturnType(method, typeVarMap);
+
+        if (contentArr.isEmpty()) {
+            // No content attribute declared — Rule 2 (2xx) / Rule 3 (4xx/5xx)
+            return is2xx(responseCode) ? buildContentFromReturnType(method, typeVarMap) : null;
+        }
+
+        Content fromAnnotation = buildContentFromAnnotation(contentArr.getFirst(), method, typeVarMap);
+        // Empty @Content on 2xx — Rule 2: infer schema from return type
+        if (fromAnnotation == null && is2xx(responseCode)) {
+            return buildContentFromReturnType(method, typeVarMap);
+        }
+        return fromAnnotation;
+    }
+
+    /**
+     * Returns {@code true} when {@code responseCode} represents a 2xx HTTP status.
+     * Non-numeric values (e.g. {@code "default"}) return {@code false}.
+     *
+     * @param responseCode the HTTP response code string; must not be {@code null}
+     * @return {@code true} if the code is in the range [200, 300)
+     */
+    private static boolean is2xx(String responseCode) {
+        try {
+            int code = Integer.parseInt(responseCode);
+            return code >= 200 && code < 300;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /**

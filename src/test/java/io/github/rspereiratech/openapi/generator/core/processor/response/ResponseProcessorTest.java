@@ -229,6 +229,27 @@ class ResponseProcessorTest {
         @GetMapping
         @io.swagger.v3.oas.annotations.responses.ApiResponse
         public String apiResponseBlankDescription() { return ""; }
+
+        // Rule 2 / Rule 3 fixtures
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "OK")
+        public String apiResponse_2xx_noContentAttr() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Not Found")
+        public String apiResponse_4xx_noContentAttr() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "OK",
+                    content = @io.swagger.v3.oas.annotations.media.Content),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400", description = "Bad Request",
+                    content = @io.swagger.v3.oas.annotations.media.Content)
+        })
+        public String apiResponse_2xx_emptyContent_and_4xx_emptyContent() { return ""; }
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -584,6 +605,70 @@ class ResponseProcessorTest {
         ApiResponses responses = customProc.processResponses(method("getReturnsString"), "GET");
         assertNotNull(responses.get("200").getContent().get("*/*"),
                 "Blank defaultProducesMediaType must fall back to '*/*'");
+    }
+
+    // ==========================================================================
+    // Rule 2 — 2xx without content → infer schema from return type
+    // ==========================================================================
+
+    @Test
+    void rule2_2xx_noContentAttr_inferredFromReturnType() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponse_2xx_noContentAttr"), "GET");
+        assertNotNull(responses.get("200").getContent(),
+                "Rule 2: 2xx @ApiResponse without content must infer schema from return type");
+    }
+
+    @Test
+    void rule2_2xx_emptyContent_inferredFromReturnType() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponse_2xx_emptyContent_and_4xx_emptyContent"), "GET");
+        assertNotNull(responses.get("200").getContent(),
+                "Rule 2: 2xx @ApiResponse with empty @Content must infer schema from return type");
+    }
+
+    // ==========================================================================
+    // Rule 3 — 4xx/5xx without content → no body
+    // ==========================================================================
+
+    @Test
+    void rule3_4xx_noContentAttr_hasNoBody() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponse_4xx_noContentAttr"), "GET");
+        assertNull(responses.get("404").getContent(),
+                "Rule 3: 4xx @ApiResponse without content must produce no response body");
+    }
+
+    @Test
+    void rule3_4xx_emptyContent_hasNoBody() throws Exception {
+        ApiResponses responses = processor.processResponses(
+                method("apiResponse_2xx_emptyContent_and_4xx_emptyContent"), "GET");
+        assertNull(responses.get("400").getContent(),
+                "Rule 3: 4xx @ApiResponse with empty @Content must produce no response body");
+    }
+
+    @Test
+    void rule3_4xx_emptyContent_doesNotBleedReturnType() throws Exception {
+        // Existing fixture: putWithExplicitResponses has 404 with content = @Content on a void method
+        ApiResponses responses = processor.processResponses(method("putWithExplicitResponses"), "PUT");
+        assertNull(responses.get("404").getContent(),
+                "Rule 3: 4xx with empty @Content on a void method must still produce no body");
+    }
+
+    // ==========================================================================
+    // Rule 4 — no @ApiResponse → status from resolver, schema from return type
+    // ==========================================================================
+
+    @Test
+    void rule4_noApiResponse_nonVoid_produces200WithContent() throws Exception {
+        ApiResponses responses = processor.processResponses(method("getReturnsString"), "GET");
+        assertNotNull(responses.get("200"),       "Rule 4: no @ApiResponse + non-void → 200");
+        assertNotNull(responses.get("200").getContent(), "Rule 4: content must be inferred from return type");
+    }
+
+    @Test
+    void rule4_noApiResponse_void_produces204WithNoContent() throws Exception {
+        ApiResponses responses = processor.processResponses(method("deleteReturnsVoid"), "DELETE");
+        assertNotNull(responses.get("204"),       "Rule 4: no @ApiResponse + void → 204");
+        assertNull(responses.get("204").getContent(), "Rule 4: void return must produce no body");
     }
 
     // ==========================================================================
