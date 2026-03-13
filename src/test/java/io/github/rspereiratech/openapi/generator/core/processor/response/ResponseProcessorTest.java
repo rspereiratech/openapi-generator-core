@@ -44,7 +44,7 @@ import static org.mockito.Mockito.lenient;
 /**
  * Unit tests for {@link ResponseProcessorImpl}.
  *
- * <p>Covers default status-code inference (GET→200, POST→201, void→204), {@code @ResponseStatus}
+ * <p>Covers default status-code inference (GET→200, POST→201), {@code @ResponseStatus}
  * override, explicit {@code @ApiResponse} / {@code @ApiResponses} handling, schema resolution,
  * media-type derivation from {@code produces} attributes, composed schema variants
  * (oneOf/allOf/anyOf/{@code @ArraySchema}), configurable default produces media type,
@@ -273,9 +273,9 @@ class ResponseProcessorTest {
     }
 
     @Test
-    void delete_voidReturn_produces204() throws Exception {
+    void delete_voidReturn_produces200() throws Exception {
         ApiResponses responses = processor.processResponses(method("deleteReturnsVoid"), "DELETE");
-        assertTrue(responses.containsKey("204"), "Void return type should produce 204");
+        assertTrue(responses.containsKey("200"), "Void return type without @ResponseStatus should produce 200");
     }
 
     // ==========================================================================
@@ -330,7 +330,7 @@ class ResponseProcessorTest {
     @Test
     void voidMethod_responseHasNoContent() throws Exception {
         ApiResponses responses = processor.processResponses(method("deleteReturnsVoid"), "DELETE");
-        assertNull(responses.get("204").getContent(),
+        assertNull(responses.get("200").getContent(),
                 "Void return type must produce a response without content");
     }
 
@@ -665,10 +665,10 @@ class ResponseProcessorTest {
     }
 
     @Test
-    void rule4_noApiResponse_void_produces204WithNoContent() throws Exception {
+    void rule4_noApiResponse_void_produces200WithNoContent() throws Exception {
         ApiResponses responses = processor.processResponses(method("deleteReturnsVoid"), "DELETE");
-        assertNotNull(responses.get("204"),       "Rule 4: no @ApiResponse + void → 204");
-        assertNull(responses.get("204").getContent(), "Rule 4: void return must produce no body");
+        assertNotNull(responses.get("200"),       "Rule 4: no @ApiResponse + void → 200");
+        assertNull(responses.get("200").getContent(), "Rule 4: void return must produce no body");
     }
 
     // ==========================================================================

@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- `ResponseProcessorImpl`: content-inference rules for `@ApiResponse` annotations — (1) explicit `@Content` with schema hints is used as-is; (2) 2xx responses with no `content` attribute or an empty `@Content` infer the schema from the method's return type; (3) 4xx/5xx responses with no `content` produce no response body; (4) methods with no `@ApiResponse` at all generate a default response whose status code and schema are fully inferred (void return → 204 No Content, non-void → 200/201 with return-type schema)
+- `ResponseProcessorImpl`: content-inference rules for `@ApiResponse` annotations — (1) explicit `@Content` with schema hints is used as-is; (2) 2xx responses with no `content` attribute or an empty `@Content` infer the schema from the method's return type; (3) 4xx/5xx responses with no `content` produce no response body; (4) methods with no `@ApiResponse` at all generate a default response whose status code and schema are fully inferred (void return → 200 OK with no body, non-void → 200/201 with return-type schema)
 - `SchemaEnricher` interface — strategy for enriching OpenAPI component schemas after `ModelConverters` resolution; replaces the former single-enricher coupling in `ModelConvertersTypeSchemaHandler` with a composable, ordered enricher chain
 - `SchemaAnnotationEnricher` — reads `@io.swagger.v3.oas.annotations.media.Schema` at class and field level and propagates a comprehensive set of attributes to the resolved schemas; particularly valuable for Java records where `ModelConverters` does not reliably pick up `@Schema` metadata; applies a non-overwriting policy (existing schema values are never replaced). Class-level attributes: `description`, `title`, `format`, `example`, `defaultValue`, `nullable`, `readOnly`, `writeOnly`, `accessMode`, `deprecated`, `externalDocs`. Field-level attributes: all of the above plus `pattern`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `minLength`, `maxLength`, `minProperties`, `maxProperties`, `multipleOf`, `allowableValues` (→ enum), `hidden` (removes the property from the schema)
 - `SchemaEnricherSupport` (package-private) — shared utility class for `SchemaEnricher` implementations; provides `allDeclaredFields`, `collectReachableClasses`, `resolvePropertyName`, and `isJavaBuiltin` helpers extracted from `ValidationSchemaEnricher`
@@ -89,7 +89,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `ParameterProcessorImpl` — resolves `@PathVariable`, `@RequestParam`, `@RequestHeader`, `@CookieValue`, and `Pageable` parameters
 - `RequestBodyProcessorImpl` — builds request body schema references from `@RequestBody`
 - `ResponseProcessorImpl` — builds response entries from `@ApiResponse` / `@ApiResponses`, with fallback to `@ResponseStatus` and HTTP method defaults
-- `DefaultHttpStatusResolver` — resolves HTTP status codes from `@ResponseStatus` or method-based defaults (`POST → 201`, `DELETE → 204`, others `→ 200`)
+- `DefaultHttpStatusResolver` — resolves HTTP status codes from `@ResponseStatus` or method-based defaults (`POST → 201`, others `→ 200`)
 - `SchemaProcessorImpl` — chain-of-responsibility schema resolution
 - `VoidTypeSchemaHandler` — handles `void` / `Void` return types
 - `FluxTypeSchemaHandler` — unwraps `Flux<T>` to array schemas

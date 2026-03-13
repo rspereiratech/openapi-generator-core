@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Unit tests for {@link DefaultHttpStatusResolver}.
  *
  * <p>Verifies {@link DefaultHttpStatusResolver#resolveCode} precondition enforcement,
- * default status-code inference rules (GET/PUT/PATCH/DELETE→200, POST→201, void→204),
+ * default status-code inference rules (GET/PUT/PATCH/DELETE→200, POST→201),
  * {@code @ResponseStatus} override via both {@code value} and {@code code} attributes,
  * and {@link DefaultHttpStatusResolver#describeCode} delegation to
  * {@link org.springframework.http.HttpStatus#getReasonPhrase()}.
@@ -126,15 +126,15 @@ class DefaultHttpStatusResolverTest {
     }
 
     @Test
-    void get_voidReturn_resolves204() throws Exception {
+    void get_voidReturn_resolves200() throws Exception {
         Method m = method("voidReturn");
-        assertEquals("204", resolver.resolveCode(m, "GET", m.getGenericReturnType()));
+        assertEquals("200", resolver.resolveCode(m, "GET", m.getGenericReturnType()));
     }
 
     @Test
-    void delete_voidReturn_resolves204() throws Exception {
+    void delete_voidReturn_resolves200() throws Exception {
         Method m = method("voidReturn");
-        assertEquals("204", resolver.resolveCode(m, "DELETE", m.getGenericReturnType()));
+        assertEquals("200", resolver.resolveCode(m, "DELETE", m.getGenericReturnType()));
     }
 
     // ==========================================================================

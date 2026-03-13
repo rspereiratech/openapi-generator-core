@@ -121,14 +121,14 @@ Builds the `responses` map for an operation.
 | `@ApiResponse` 2xx — `content` absent or empty `@Content` | Infer schema from the method's return type |
 | `@ApiResponse` 4xx / 5xx — `content` absent or empty `@Content` | No response body |
 | No `@ApiResponse` at all (non-void return) | Default status + return-type schema |
-| No `@ApiResponse` at all (void / `Void` return) | `204 No Content`, no body |
+| No `@ApiResponse` at all (void / `Void` return) | `200 OK`, no body |
 
 When no `@ApiResponse` is present the status code is resolved from `@ResponseStatus` or HTTP method defaults:
 
 | Condition | Default Status |
 |---|---|
 | `POST` method | `201 Created` |
-| Void return type | `204 No Content` |
+| Void return type | `200 OK` |
 | All others | `200 OK` |
 
 ---

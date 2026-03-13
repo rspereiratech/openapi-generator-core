@@ -11,7 +11,6 @@
 package io.github.rspereiratech.openapi.generator.core.processor.response.resolver;
 
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
-import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import com.google.common.base.Preconditions;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -20,16 +19,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.Objects;
 
 /**
  * Default {@link HttpStatusResolver} implementation.
  *
- * <p>Resolves HTTP status codes using the standard Spring MVC / SpringDoc rules:
+ * <p>Resolves HTTP status codes using the standard Spring MVC rules:
  * <ol>
  *   <li>{@code @ResponseStatus} annotation wins if present.</li>
  *   <li>POST → 201.</li>
- *   <li>void return type → 204.</li>
  *   <li>Otherwise → 200.</li>
  * </ol>
  *
@@ -50,7 +47,6 @@ public class DefaultHttpStatusResolver implements HttpStatusResolver {
      *   <li>{@code @ResponseStatus} annotation on the method (or any annotation
      *       meta-annotated with {@code @ResponseStatus}).</li>
      *   <li>POST → 201 Created.</li>
-     *   <li>Void return type → 204 No Content.</li>
      *   <li>Fallback → 200 OK.</li>
      * </ol>
      */
@@ -69,11 +65,6 @@ public class DefaultHttpStatusResolver implements HttpStatusResolver {
         // Default rule: POST → 201 Created
         if (HttpMethod.POST.matches(httpMethod)) {
             return String.valueOf(HttpStatus.CREATED.value());
-        }
-
-        // Void return type → 204 No Content
-        if (TypeUtils.isVoid(TypeUtils.unwrapType(returnType))) {
-            return String.valueOf(HttpStatus.NO_CONTENT.value());
         }
 
         // Fallback → 200 OK

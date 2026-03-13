@@ -104,8 +104,8 @@ If the method carries **no** `@ApiResponse` annotation (neither directly, nor in
 
 | Return type | Generated response |
 |---|---|
-| `void` / `Void` | `204 No Content` — no body |
-| `ResponseEntity<Void>` | `204 No Content` — no body |
+| `void` / `Void` | `200 OK` — no body |
+| `ResponseEntity<Void>` | `200 OK` — no body |
 | Any other type | Status code from `@ResponseStatus` or HTTP method default + content inferred from return type |
 
 HTTP method defaults when no `@ResponseStatus` is present:
@@ -114,7 +114,6 @@ HTTP method defaults when no `@ResponseStatus` is present:
 |---|---|
 | `POST` | `201 Created` |
 | Any other | `200 OK` |
-| Void return | `204 No Content` |
 
 ```java
 // No @ApiResponse — Rule 4 applies

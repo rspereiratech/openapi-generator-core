@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  *   <li><b>4xx/5xx without content</b> → no response body.</li>
  *   <li><b>No {@code @ApiResponse} at all</b> → status code resolved via
  *       {@link io.github.rspereiratech.openapi.generator.core.processor.response.resolver.HttpStatusResolver};
- *       schema inferred from return type (void return produces 204 with no body).</li>
+ *       schema inferred from return type (void return produces 200 with no body).</li>
  * </ol>
  *
  * <p>HTTP status-code resolution is delegated to an {@link HttpStatusResolver} strategy,
