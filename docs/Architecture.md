@@ -111,7 +111,19 @@ Builds the `parameters` list for an operation. Handles:
 
 Builds the `responses` map for an operation.
 
-If `@ApiResponse` / `@ApiResponses` are present they are used directly. `@ApiResponse` annotations embedded in `@Operation(responses = …)` are also discovered and merged. Otherwise, the status code is resolved from `@ResponseStatus` or from HTTP method defaults:
+`@ApiResponse` annotations embedded in `@Operation(responses = …)` are also discovered and merged. Response content is resolved according to four inference rules — see [Response Processing](Response-Processing.md) for the full decision table.
+
+**Content-inference rules (summary):**
+
+| Situation | Content resolution |
+|---|---|
+| `@ApiResponse` with explicit `content` carrying a schema hint | Use exactly what was declared |
+| `@ApiResponse` 2xx — `content` absent or empty `@Content` | Infer schema from the method's return type |
+| `@ApiResponse` 4xx / 5xx — `content` absent or empty `@Content` | No response body |
+| No `@ApiResponse` at all (non-void return) | Default status + return-type schema |
+| No `@ApiResponse` at all (void / `Void` return) | `204 No Content`, no body |
+
+When no `@ApiResponse` is present the status code is resolved from `@ResponseStatus` or HTTP method defaults:
 
 | Condition | Default Status |
 |---|---|
