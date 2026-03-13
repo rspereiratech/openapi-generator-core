@@ -47,8 +47,9 @@ import static org.mockito.Mockito.verify;
  * {@code cookie}), name resolution from annotation attributes, the {@code required} flag,
  * exclusion of {@code @RequestBody} and unannotated parameters, Swagger
  * {@code @Parameter} enrichment and hidden-flag filtering, {@code Pageable} expansion,
- * default and custom ignored-type lists, and the schema-override behaviour for
- * otherwise-ignored types annotated with {@code @Parameter(schema=@Schema(...))}.
+ * default and custom ignored-type lists, schema-override behaviour for otherwise-ignored
+ * types annotated with {@code @Parameter(schema=@Schema(...))}, and method-level virtual
+ * parameters declared via {@code @Parameter} / {@code @Parameters} on the method itself.
  */
 @ExtendWith(MockitoExtension.class)
 class ParameterProcessorTest {
@@ -112,6 +113,37 @@ class ParameterProcessorTest {
                         description = "Locale for filtering (e.g., en_US, pt_BR)",
                         schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", example = "en_US"))
                 Locale locale) {}
+
+        // ------------------------------------------------------------------
+        // Virtual / method-level @Parameter fixtures
+        // ------------------------------------------------------------------
+
+        @io.swagger.v3.oas.annotations.Parameter(name = "page", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Integer.class), description = "Page number (0..N)")
+        @io.swagger.v3.oas.annotations.Parameter(name = "size", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Integer.class), description = "Number of records per page")
+        @io.swagger.v3.oas.annotations.Parameter(name = "sort", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class),  description = "Sort criteria", example = "id,asc")
+        public java.util.List<String> withMethodLevelParams(
+                @io.swagger.v3.oas.annotations.Parameter(hidden = true) org.springframework.data.domain.Pageable pageable) { return null; }
+
+        @io.swagger.v3.oas.annotations.Parameters({
+                @io.swagger.v3.oas.annotations.Parameter(name = "filter", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,  schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class)),
+                @io.swagger.v3.oas.annotations.Parameter(name = "lang",   in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER, schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class))
+        })
+        public java.util.List<String> withParametersContainer() { return null; }
+
+        @io.swagger.v3.oas.annotations.Parameter(name = "hidden-virtual", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, hidden = true)
+        public void withMethodLevelHiddenParam() {}
+
+        @io.swagger.v3.oas.annotations.Parameter(in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = "No name")
+        public void withNamelessMethodLevelParam() {}
+
+        @io.swagger.v3.oas.annotations.Parameter(name = "status", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = "Virtual description")
+        public void withConcreteAndVirtualSameName(@RequestParam("status") String status) {}
+
+        @io.swagger.v3.oas.annotations.Parameter(name = "x-locale", in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER, required = true, schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class), description = "Locale header")
+        public void withMethodLevelHeaderParam() {}
+
+        @io.swagger.v3.oas.annotations.Parameter(name = "deprecated-param", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, deprecated = true, schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class))
+        public void withDeprecatedVirtualParam() {}
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -385,5 +417,87 @@ class ParameterProcessorTest {
                 () -> assertEquals("en_US", p.getSchema().getExample()),
                 () -> assertEquals("Locale for filtering (e.g., en_US, pt_BR)", p.getDescription())
         );
+    }
+
+    // ==========================================================================
+    // Method-level @Parameter (virtual parameters)
+    // ==========================================================================
+
+    @Test
+    void methodLevelParams_hiddenPageable_producesThreeVirtualParams() throws Exception {
+        List<Parameter> params = processor.processParameters(
+                method("withMethodLevelParams", org.springframework.data.domain.Pageable.class));
+        assertEquals(3, params.size(), "Hidden Pageable + 3 method-level @Parameter should yield 3 virtual params");
+        assertTrue(params.stream().anyMatch(p -> "page".equals(p.getName())));
+        assertTrue(params.stream().anyMatch(p -> "size".equals(p.getName())));
+        assertTrue(params.stream().anyMatch(p -> "sort".equals(p.getName())));
+    }
+
+    @Test
+    void methodLevelParams_allInQuery() throws Exception {
+        List<Parameter> params = processor.processParameters(
+                method("withMethodLevelParams", org.springframework.data.domain.Pageable.class));
+        assertTrue(params.stream().allMatch(p -> "query".equals(p.getIn())));
+    }
+
+    @Test
+    void methodLevelParams_descriptionAndExampleSet() throws Exception {
+        List<Parameter> params = processor.processParameters(
+                method("withMethodLevelParams", org.springframework.data.domain.Pageable.class));
+        Parameter sort = params.stream().filter(p -> "sort".equals(p.getName())).findFirst().orElseThrow();
+        assertAll(
+                () -> assertEquals("Sort criteria", sort.getDescription()),
+                () -> assertEquals("id,asc", sort.getExample())
+        );
+    }
+
+    @Test
+    void parametersContainer_bothParamsProduced() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withParametersContainer"));
+        assertEquals(2, params.size());
+        assertTrue(params.stream().anyMatch(p -> "filter".equals(p.getName()) && "query".equals(p.getIn())));
+        assertTrue(params.stream().anyMatch(p -> "lang".equals(p.getName())   && "header".equals(p.getIn())));
+    }
+
+    @Test
+    void methodLevelHiddenParam_isSkipped() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withMethodLevelHiddenParam"));
+        assertTrue(params.isEmpty(), "Method-level @Parameter(hidden=true) must be skipped");
+    }
+
+    @Test
+    void namelessMethodLevelParam_isSkipped() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withNamelessMethodLevelParam"));
+        assertTrue(params.isEmpty(), "Method-level @Parameter with blank name must be skipped");
+    }
+
+    @Test
+    void concreteParamWins_whenNameClashesWithVirtual() throws Exception {
+        List<Parameter> params = processor.processParameters(
+                method("withConcreteAndVirtualSameName", String.class));
+        assertEquals(1, params.size(), "Concrete and virtual with same name must produce exactly one param");
+        // Concrete wins — description comes from @RequestParam, not from virtual @Parameter
+        assertFalse("Virtual description".equals(params.get(0).getDescription()),
+                "Concrete @RequestParam must win over method-level virtual @Parameter");
+    }
+
+    @Test
+    void methodLevelHeaderParam_setsHeaderLocationAndRequired() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withMethodLevelHeaderParam"));
+        assertEquals(1, params.size());
+        Parameter p = params.get(0);
+        assertAll(
+                () -> assertEquals("x-locale", p.getName()),
+                () -> assertEquals("header", p.getIn()),
+                () -> assertTrue(p.getRequired()),
+                () -> assertEquals("Locale header", p.getDescription())
+        );
+    }
+
+    @Test
+    void deprecatedVirtualParam_setsDeprecatedFlag() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withDeprecatedVirtualParam"));
+        assertEquals(1, params.size());
+        assertTrue(params.get(0).getDeprecated(), "deprecated=true on @Parameter must propagate to OpenAPI");
     }
 }

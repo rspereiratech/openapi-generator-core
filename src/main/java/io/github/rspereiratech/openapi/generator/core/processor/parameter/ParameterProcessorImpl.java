@@ -15,6 +15,7 @@ import io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeU
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
 import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.CookieParameter;
 import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.PathParameter;
@@ -29,10 +30,12 @@ import java.util.HashSet;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -47,7 +50,10 @@ import java.util.stream.Stream;
  *   <li>{@code @RequestParam}  → {@code in: query}</li>
  *   <li>{@code @RequestHeader} → {@code in: header}</li>
  *   <li>{@code @CookieValue}   → {@code in: cookie}</li>
- *   <li>{@code @io.swagger.v3.oas.annotations.Parameter} – enriches any of the above</li>
+ *   <li>{@code @io.swagger.v3.oas.annotations.Parameter} on a method parameter – enriches any of the above</li>
+ *   <li>{@code @io.swagger.v3.oas.annotations.Parameter} / {@code @Parameters} at <em>method level</em>
+ *       (no corresponding Java parameter) – generates virtual parameters, e.g. pagination query params
+ *       when {@code Pageable} is hidden via {@code @Parameter(hidden = true)}</li>
  * </ul>
  *
  * <p>{@code @RequestBody} parameters are intentionally excluded from this
@@ -149,7 +155,102 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                 .filter(h -> !h.isBlank() && !h.startsWith("!"))
                 .map(ParameterProcessorImpl::buildMappingHeaderParameter);
 
-        return Stream.concat(methodParamStream, mappingHeaderStream).toList();
+        // Concrete parameters (method params + mapping headers) take precedence over virtuals
+        List<Parameter> concrete = Stream.concat(methodParamStream, mappingHeaderStream).toList();
+        Set<String> existingNames = concrete.stream()
+                .map(Parameter::getName)
+                .filter(n -> n != null)
+                .collect(Collectors.toSet());
+
+        List<Parameter> virtuals = collectMethodLevelVirtualParameters(method)
+                .filter(p -> p.getName() == null || !existingNames.contains(p.getName()))
+                .toList();
+
+        return Stream.concat(concrete.stream(), virtuals.stream()).toList();
+    }
+
+    // ------------------------------------------------------------------
+
+    /**
+     * Collects virtual {@link Parameter} objects declared via
+     * {@code @io.swagger.v3.oas.annotations.Parameter} or
+     * {@code @io.swagger.v3.oas.annotations.Parameters} annotations placed directly on
+     * the method (not on any individual Java method parameter).
+     *
+     * <p>This supports the common pattern of hiding a {@code Pageable} parameter from the
+     * spec via {@code @Parameter(hidden = true)} while declaring the individual pagination
+     * query parameters ({@code page}, {@code size}, {@code sort}) explicitly at method level.
+     *
+     * <p>Annotations are walked across the full type hierarchy (declaring class, superclasses,
+     * and interfaces) via {@link AnnotationUtils#getAllAnnotations(Method)}.
+     * Duplicate names from the hierarchy are collapsed to the first occurrence.
+     * Parameters with {@code hidden = true} or a blank {@code name} are silently skipped.
+     *
+     * @param method the controller method to inspect
+     * @return a stream of virtual parameters in declaration order
+     */
+    private Stream<Parameter> collectMethodLevelVirtualParameters(Method method) {
+        List<Annotation> methodAnnotations = AnnotationUtils.getAllAnnotations(method);
+
+        Stream<Annotation> directParams = methodAnnotations.stream()
+                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameter"));
+
+        Stream<Annotation> containerParams = methodAnnotations.stream()
+                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameters"))
+                .flatMap(ann -> AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "value").stream());
+
+        // Deduplicate by name (first occurrence wins) using a LinkedHashMap to preserve order
+        Map<String, Annotation> byName = new LinkedHashMap<>();
+        Stream.concat(directParams, containerParams)
+                .filter(ann -> !AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false))
+                .forEach(ann -> {
+                    String name = AnnotationAttributeUtils.getStringAttribute(ann, "name");
+                    if (!name.isBlank()) byName.putIfAbsent(name, ann);
+                });
+
+        return byName.values().stream().map(this::buildVirtualParameter);
+    }
+
+    /**
+     * Builds a single virtual {@link Parameter} from a method-level
+     * {@code @io.swagger.v3.oas.annotations.Parameter} annotation.
+     *
+     * <p>The {@code in} location is resolved from the annotation's {@code in} attribute
+     * via {@link AnnotationAttributeUtils#getEnumName} (classloader-safe enum reading).
+     * {@code ParameterIn.DEFAULT} maps to {@code "query"}. Schema is derived from the
+     * annotation's {@code schema} attribute via {@link #extractExplicitParameterSchema}.
+     *
+     * @param ann the {@code @Parameter} annotation instance; must not be {@code null}
+     * @return the populated {@link Parameter}
+     */
+    private Parameter buildVirtualParameter(Annotation ann) {
+        String name        = AnnotationAttributeUtils.getStringAttribute(ann, "name");
+        String location    = AnnotationAttributeUtils.getEnumName(ann, "in")
+                .map(String::toLowerCase)
+                .map(s -> "default".equals(s) ? "query" : s)
+                .orElse("query");
+        boolean required   = AnnotationAttributeUtils.getBooleanAttribute(ann, "required", false);
+        boolean deprecated = AnnotationAttributeUtils.getBooleanAttribute(ann, "deprecated", false);
+        String description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
+        String example     = AnnotationAttributeUtils.getStringAttribute(ann, "example");
+        Schema<?> schema   = extractExplicitParameterSchema(new Annotation[]{ann}).orElse(null);
+
+        Parameter parameter = switch (location) {
+            case "path"   -> new PathParameter();
+            case "header" -> new HeaderParameter();
+            case "cookie" -> new CookieParameter();
+            default       -> new QueryParameter();
+        };
+        parameter.setIn(location);
+        parameter.setName(name);
+        parameter.setRequired("path".equals(location) || required);
+        if (schema != null)         parameter.setSchema(schema);
+        if (!description.isBlank()) parameter.setDescription(description);
+        if (!example.isBlank())     parameter.setExample(example);
+        if (deprecated)             parameter.setDeprecated(true);
+
+        log.trace("  Virtual parameter [{}] → in:{} required:{}", name, location, parameter.getRequired());
+        return parameter;
     }
 
     // ------------------------------------------------------------------

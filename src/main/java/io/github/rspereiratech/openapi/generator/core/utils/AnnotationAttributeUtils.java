@@ -168,6 +168,26 @@ public final class AnnotationAttributeUtils {
     }
 
     /**
+     * Reflectively reads an {@link Enum}-typed attribute from an annotation by name and
+     * returns the constant's {@linkplain Enum#name() declared name} as a {@link String}.
+     *
+     * <p>Using the constant name instead of casting to the concrete enum type keeps the
+     * call-site classloader-independent: the enum may be loaded from a foreign
+     * {@code URLClassLoader} and cannot be referenced by class literal in generator code.</p>
+     *
+     * <p>Returns {@link Optional#empty()} if the method does not exist, the returned value
+     * is not an {@link Enum}, or an exception is thrown during invocation.</p>
+     *
+     * @param annotation    the annotation instance to read from
+     * @param attributeName the attribute name to invoke (e.g. {@code "in"})
+     * @return the enum constant name (e.g. {@code "QUERY"}, {@code "PATH"}), or empty
+     */
+    public static Optional<String> getEnumName(Annotation annotation, String attributeName) {
+        Object raw = invokeAttribute(annotation, attributeName);
+        return (raw instanceof Enum<?> e) ? Optional.of(e.name()) : Optional.empty();
+    }
+
+    /**
      * Applies {@code parser} to {@code value} and returns the result wrapped in an
      * {@link Optional}, or {@link Optional#empty()} if the parser throws a
      * {@link RuntimeException} (e.g. {@link NumberFormatException}).
