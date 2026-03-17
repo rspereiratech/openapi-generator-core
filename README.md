@@ -31,19 +31,9 @@ This module contains all the logic: classpath scanning, annotation resolution, t
 
 ## Quickstart
 
-This example shows how to go from a Spring MVC controller to a generated `openapi.yaml` in three steps.
+This example shows how to go from a Spring MVC controller to a generated `openapi.yaml` in two steps.
 
-### 1. Add the parent POM
-
-```xml
-<parent>
-  <groupId>io.github.rspereiratech</groupId>
-  <artifactId>openapi-generator-parent</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
-</parent>
-```
-
-### 2. Add the dependency
+### 1. Add the dependency
 
 ```xml
 <dependency>
@@ -53,7 +43,7 @@ This example shows how to go from a Spring MVC controller to a generated `openap
 </dependency>
 ```
 
-### 3. Call the generator
+### 2. Call the generator
 
 ```java
 GeneratorConfig config = GeneratorConfig.builder()
@@ -97,7 +87,6 @@ OpenApiWriter             → serialises to YAML or JSON
 |---|---|
 | Java | 21+ |
 | Maven | 3.9+ |
-| `openapi-generator-parent` | latest (must be installed locally) |
 
 ---
 
