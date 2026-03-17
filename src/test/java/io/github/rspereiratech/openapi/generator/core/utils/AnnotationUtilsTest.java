@@ -10,6 +10,7 @@
  */
 package io.github.rspereiratech.openapi.generator.core.utils;
 
+import io.swagger.v3.oas.annotations.Operation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -56,6 +57,21 @@ class AnnotationUtilsTest {
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
     @interface Unrelated {}
+
+    // ==========================================================================
+    // Fixture for findSwaggerAnnotation tests
+    // ==========================================================================
+
+    @SuppressWarnings("unused")
+    static class SwaggerFixtures {
+
+        @GetMapping("/op")
+        @Operation(summary = "A test operation")
+        public String withOperation() { return ""; }
+
+        @GetMapping("/plain")
+        public String withoutOperation() { return ""; }
+    }
 
     // ==========================================================================
     // Fixture classes / interfaces for getAllAnnotations tests
@@ -296,6 +312,64 @@ class AnnotationUtilsTest {
     void collectAllBySimpleName_noMatch_returnsEmptyList() {
         List<Annotation> found = AnnotationUtils.collectAllBySimpleName(ConcreteController.class, "NonExistent");
         Assertions.assertTrue(found.isEmpty(), "No annotations should be found for a non-existent simple name");
+    }
+
+    // ==========================================================================
+    // findSwaggerAnnotation(Method, String)
+    // ==========================================================================
+
+    @Test
+    void findSwaggerAnnotation_method_presentAnnotationFound() throws Exception {
+        Method method = SwaggerFixtures.class.getDeclaredMethod("withOperation");
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(method, "Operation");
+        Assertions.assertTrue(result.isPresent(), "@Operation must be found on the method");
+        Assertions.assertTrue(result.get() instanceof Operation);
+    }
+
+    @Test
+    void findSwaggerAnnotation_method_absentReturnsEmpty() throws Exception {
+        Method method = SwaggerFixtures.class.getDeclaredMethod("withoutOperation");
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(method, "Operation");
+        Assertions.assertTrue(result.isEmpty(), "Absent @Operation must return empty Optional");
+    }
+
+    @Test
+    void findSwaggerAnnotation_method_wrongSimpleName_returnsEmpty() throws Exception {
+        Method method = SwaggerFixtures.class.getDeclaredMethod("withOperation");
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(method, "Parameter");
+        Assertions.assertTrue(result.isEmpty(), "Searching for @Parameter on a method with only @Operation must return empty");
+    }
+
+    // ==========================================================================
+    // findSwaggerAnnotation(Annotation[], String)
+    // ==========================================================================
+
+    @Test
+    void findSwaggerAnnotation_array_presentAnnotationFound() throws Exception {
+        Annotation[] annotations = SwaggerFixtures.class.getDeclaredMethod("withOperation").getAnnotations();
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(annotations, "Operation");
+        Assertions.assertTrue(result.isPresent(), "@Operation must be found in the annotation array");
+    }
+
+    @Test
+    void findSwaggerAnnotation_array_absentReturnsEmpty() throws Exception {
+        Annotation[] annotations = SwaggerFixtures.class.getDeclaredMethod("withoutOperation").getAnnotations();
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(annotations, "Operation");
+        Assertions.assertTrue(result.isEmpty(), "Absent @Operation must return empty Optional from array");
+    }
+
+    @Test
+    void findSwaggerAnnotation_array_emptyArray_returnsEmpty() {
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(new Annotation[0], "Operation");
+        Assertions.assertTrue(result.isEmpty(), "Empty annotation array must return empty Optional");
+    }
+
+    @Test
+    void findSwaggerAnnotation_array_nonSwaggerAnnotationNotMatched() throws Exception {
+        // @GetMapping is not an io.swagger annotation — must not be returned even if simpleName matches
+        Annotation[] annotations = SwaggerFixtures.class.getDeclaredMethod("withOperation").getAnnotations();
+        java.util.Optional<Annotation> result = AnnotationUtils.findSwaggerAnnotation(annotations, "GetMapping");
+        Assertions.assertTrue(result.isEmpty(), "Non-Swagger annotation must not be returned by findSwaggerAnnotation");
     }
 
     // ==========================================================================

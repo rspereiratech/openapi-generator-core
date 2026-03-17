@@ -85,11 +85,41 @@ ConcreteController
 Converts a single controller method into an OpenAPI `Operation`. Collects:
 
 - HTTP method and path from routing annotations
-- Summary and description from `@Operation`
+- Summary, description, and operationId from `@Operation`
 - Tags from `@Tag` (merged with controller-level tags)
 - Responses from `@ApiResponse` / `@ApiResponses`
 - Parameters via `ParameterProcessor`
 - Request body via `RequestBodyProcessor`
+
+After parameters are built, `OperationProcessorImpl` performs a **second enrichment pass** using `@Operation.parameters[]`. This supports the pattern where `description` and `example` are declared on an `@Parameter` entry inside `@Operation` rather than directly on the Java method parameter:
+
+```java
+@Operation(parameters = {
+    @Parameter(name = "tenantId", description = "The ID of the tenant to provision.")
+})
+@PostMapping("/tenant/{tenantId}/provision")
+ResponseEntity<String> provisionTenant(@PathVariable String tenantId);
+```
+
+The `@Operation` annotation is resolved once via `AnnotationUtils.findSwaggerAnnotation(method, "Operation")` and reused for both the scalar enrichment pass and the parameter enrichment pass, avoiding a redundant hierarchy walk. Descriptions already set by a concrete `@Parameter` on the Java parameter are never overwritten.
+
+---
+
+### `RequestBodyProcessorImpl`
+
+Builds the `requestBody` entry for an operation. Locates the parameter annotated with `@RequestBody` (Spring MVC) and resolves its schema via `SchemaProcessor`.
+
+Swagger `@io.swagger.v3.oas.annotations.parameters.RequestBody` metadata (description, schema override via `content[0].schema.implementation`) is resolved through a **two-step priority chain**:
+
+1. **Inline annotation on the method parameter** — `@io.swagger.v3.oas.annotations.parameters.RequestBody` placed directly on the Java parameter. This is the most specific source and always wins.
+2. **`@Operation.requestBody` fallback** — when no inline annotation is present, the `requestBody` attribute of `@Operation` is inspected. Because `@Operation.requestBody()` always provides an empty default instance, the annotation is only used when it carries at least one non-default attribute (`description`, `ref`, `content`, or `required = true`).
+
+```java
+// Pattern supported as fallback:
+@Operation(requestBody = @RequestBody(description = "The set of supervisor ids to provision"))
+@PostMapping("/tenant/{tenantId}/supervisors/provision")
+ResponseEntity<String> provisionSupervisors(..., @RequestBody Set<String> supervisorIds);
+```
 
 ---
 
@@ -184,11 +214,13 @@ Run after all controllers have been processed. See [Post-Processors](Post-Proces
 
 ### `AnnotationUtils`
 
-Provides two key capabilities:
+Provides three key capabilities:
 
 1. **Recursive meta-annotation search** — finds an annotation on a class even if it is only present as a meta-annotation (e.g. `@CustomRestController` which is meta-annotated with `@RestController`).
 
 2. **Full hierarchy collection** — collects all instances of an annotation across the full type hierarchy (class + superclasses + interfaces), enabling multi-tag and multi-mapping scenarios.
+
+3. **Swagger annotation lookup** — `findSwaggerAnnotation(Method, String)` and `findSwaggerAnnotation(Annotation[], String)` combine the hierarchy walk and the `io.swagger` package guard into a single call, eliminating the repeated `getAllAnnotations + filter + findFirst` pattern across processors.
 
 ---
 
@@ -238,7 +270,11 @@ core/
 │   └── schema/
 │       ├── SchemaProcessor.java
 │       ├── SchemaProcessorImpl.java
-│       ├── ValidationSchemaEnricher.java
+│       ├── enricher/
+│       │   ├── SchemaEnricher.java
+│       │   ├── SchemaEnricherSupport.java
+│       │   ├── SchemaAnnotationEnricher.java
+│       │   └── ValidationSchemaEnricher.java
 │       ├── handlers/
 │       │   ├── TypeSchemaHandler.java
 │       │   ├── VoidTypeSchemaHandler.java
@@ -267,6 +303,7 @@ core/
 │   ├── PostProcessor.java
 │   ├── SchemaRegistryMergePostProcessor.java
 │   ├── PruneUnreferencedSchemasPostProcessor.java
+│   ├── SortSpecPostProcessor.java
 │   └── UniqueOperationIdPostProcessor.java
 ├── utils/
 │   ├── AnnotationUtils.java

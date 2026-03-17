@@ -92,8 +92,8 @@ public record GeneratorConfig(
         /*
          * Optional application name appended to every server URL as a path segment.
          * When set, each server URL is suffixed with {@code /<contextPath>/}.
-         * For example, {@code https://api.example.com} becomes
-         * {@code https://api.example.com/vcc-superx-api/}. May be null.
+         * For example, {@code https://api.example.com} with {@code contextPath="my-api"}
+         * becomes {@code https://api.example.com/my-api/}. May be null.
          */
         String contextPath,
 
@@ -355,20 +355,21 @@ public record GeneratorConfig(
 
         /**
          * Controls whether controllers and paths are sorted alphabetically.
-         * When {@code true} (default), controllers are sorted by canonical class name
+         * When {@code true}, controllers are sorted by canonical class name
          * before processing and paths are sorted alphabetically in the final spec,
          * guaranteeing deterministic output across machines and builds.
+         * Defaults to {@code false} — discovery order is preserved.
          *
-         * @param sortOutput {@code false} to preserve discovery order
+         * @param sortOutput {@code true} to enable deterministic ordering
          * @return this builder
          */
         public Builder sortOutput(boolean sortOutput)    { this.sortOutput   = sortOutput;   return this; }
 
         /**
-         * Sets the optional application name that is appended to every server URL
+         * Sets the optional application context path that is appended to every server URL
          * as a path segment with a trailing slash.
-         * For example, {@code contextPath("vcc-superx-api")} turns
-         * {@code https://api.example.com} into {@code https://api.example.com/vcc-superx-api/}.
+         * For example, {@code contextPath("my-api")} turns
+         * {@code https://api.example.com} into {@code https://api.example.com/my-api/}.
          *
          * @param contextPath the application context path; may be {@code null} to disable
          * @return this builder

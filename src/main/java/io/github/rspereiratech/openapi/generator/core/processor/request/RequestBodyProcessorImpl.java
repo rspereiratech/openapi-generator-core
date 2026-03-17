@@ -101,30 +101,71 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
     }
 
     /**
-     * Searches all method parameters for a Swagger
-     * {@code @io.swagger.v3.oas.annotations.parameters.RequestBody} annotation and extracts
-     * its {@code description} and {@code content[0].schema.implementation} attributes.
+     * Resolves Swagger {@code @RequestBody} metadata for the given method using a two-step
+     * priority chain:
      *
-     * <p>Returns a {@link SwaggerBodyHints} with {@code null} schema and blank description when
-     * no such annotation is found.</p>
+     * <ol>
+     *   <li><b>Inline annotation on a method parameter</b> —
+     *       {@code @io.swagger.v3.oas.annotations.parameters.RequestBody} placed directly on
+     *       the parameter is the most specific source and always wins.</li>
+     *   <li><b>{@code @Operation.requestBody}</b> — fallback when no inline annotation is present.
+     *       Because {@code @Operation.requestBody()} always provides an empty default value,
+     *       the annotation is only used when it carries at least one non-default attribute
+     *       (see {@link #isNonDefaultRequestBodyAnnotation}).</li>
+     * </ol>
      *
      * @param method the controller method to inspect; must not be {@code null}
      * @return the extracted hints; never {@code null}
      */
     private SwaggerBodyHints resolveSwaggerBodyHints(Method method) {
-        return IntStream.range(0, method.getParameterCount())
-                .boxed()
-                .flatMap(i -> Arrays.stream(AnnotationUtils.getAllParameterAnnotations(method, i)))
-                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "RequestBody"))
+        // 1. Inline @RequestBody on a method parameter — most specific
+        Optional<SwaggerBodyHints> fromParam = IntStream.range(0, method.getParameterCount())
+                .mapToObj(i -> AnnotationUtils.findSwaggerAnnotation(
+                        AnnotationUtils.getAllParameterAnnotations(method, i), "RequestBody"))
+                .flatMap(Optional::stream)
                 .findFirst()
-                .map(ann -> {
-                    String    description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
-                    Schema<?> schema      = extractImplementationClass(ann)
-                            .map(schemaProcessor::toSchema)
-                            .orElse(null);
-                    return new SwaggerBodyHints(schema, description);
-                })
+                .map(this::hintsFromAnnotation);
+
+        if (fromParam.isPresent()) return fromParam.get();
+
+        // 2. @Operation.requestBody — fallback
+        return AnnotationUtils.findSwaggerAnnotation(method, "Operation")
+                .flatMap(opAnn -> AnnotationAttributeUtils.getAnnotationAttribute(opAnn, "requestBody"))
+                .filter(RequestBodyProcessorImpl::isNonDefaultRequestBodyAnnotation)
+                .map(this::hintsFromAnnotation)
                 .orElse(new SwaggerBodyHints(null, ""));
+    }
+
+    /**
+     * Extracts {@link SwaggerBodyHints} from a Swagger
+     * {@code @io.swagger.v3.oas.annotations.parameters.RequestBody} annotation instance.
+     *
+     * @param ann the annotation instance; must not be {@code null}
+     * @return the extracted hints; never {@code null}
+     */
+    private SwaggerBodyHints hintsFromAnnotation(Annotation ann) {
+        String    description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
+        Schema<?> schema      = extractImplementationClass(ann).map(schemaProcessor::toSchema).orElse(null);
+        return new SwaggerBodyHints(schema, description);
+    }
+
+    /**
+     * Returns {@code true} if the {@code @RequestBody} annotation carries at least one
+     * non-default value.
+     *
+     * <p>This guard is necessary because {@code @Operation.requestBody()} always provides a
+     * structurally present but semantically empty default annotation instance. Without this
+     * check every method with {@code @Operation} would appear to have a Swagger request-body
+     * hint, even when none was declared.</p>
+     *
+     * @param ann the annotation instance to test; must not be {@code null}
+     * @return {@code true} if the annotation has at least one meaningful attribute
+     */
+    private static boolean isNonDefaultRequestBodyAnnotation(Annotation ann) {
+        if (!AnnotationAttributeUtils.getStringAttribute(ann, "description").isBlank()) return true;
+        if (!AnnotationAttributeUtils.getStringAttribute(ann, "ref").isBlank())         return true;
+        if (!AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "content").isEmpty()) return true;
+        return AnnotationAttributeUtils.getBooleanAttribute(ann, "required", false);
     }
 
     /**

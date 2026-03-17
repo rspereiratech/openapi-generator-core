@@ -164,6 +164,61 @@ Override via `GeneratorConfig.builder().defaultProducesMediaType("application/js
 
 ---
 
+## Named Examples (`@ExampleObject`)
+
+Declare named response examples using `@Content(examples = { @ExampleObject(...) })`:
+
+```java
+@GetMapping("/config")
+@ApiResponse(
+    responseCode = "200",
+    content = @Content(
+        mediaType = "application/json",
+        schema = @Schema(implementation = ConfigDto.class),
+        examples = {
+            @ExampleObject(
+                name        = "default",
+                summary     = "Default config",
+                description = "A typical config payload",
+                value       = "{\"key\":\"value\"}"
+            ),
+            @ExampleObject(
+                name          = "external",
+                externalValue = "https://example.com/config-example.json"
+            )
+        }
+    )
+)
+public ConfigDto getConfig() { ... }
+```
+
+### How JSON values are serialized
+
+When `value` is a valid JSON string, `ResponseProcessorImpl` parses it into a `JsonNode`
+before storing it in the `Example` model object.
+
+**Effect on YAML output:** the YAML serializer emits the parsed structure as a proper YAML
+mapping instead of a quoted escaped string:
+
+```yaml
+# Without JSON parsing (raw string):
+value: '{"key":"value"}'
+
+# With JSON parsing (JsonNode):
+value:
+  key: value
+```
+
+Non-JSON values (plain strings, numbers) are stored as-is and written verbatim.
+
+### Rules
+
+- `@ExampleObject` entries with a blank `name` are silently skipped.
+- `summary`, `description`, and `externalValue` are applied when non-blank.
+- Multiple named examples can coexist in the same `@Content`.
+
+---
+
 ## Related
 
 - [Architecture](Architecture.md) — high-level pipeline overview

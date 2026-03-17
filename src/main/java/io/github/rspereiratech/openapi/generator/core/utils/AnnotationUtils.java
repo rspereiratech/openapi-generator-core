@@ -59,6 +59,25 @@ public final class AnnotationUtils {
     }
 
     /**
+     * Finds the first annotation in {@code annotations} whose type is directly or transitively
+     * meta-annotated with an annotation matching {@code simpleName}.
+     *
+     * <p>This is equivalent to the pattern used in several processors to locate Spring mapping
+     * or Swagger annotations by name without a compile-time reference to the annotation class.</p>
+     *
+     * @param annotations the list of annotations to search; must not be {@code null}
+     * @param simpleName  the simple name of the target annotation (e.g. {@code "RequestMapping"},
+     *                    {@code "Tag"}); must not be {@code null}
+     * @return an {@link Optional} containing the first matching annotation,
+     *         or {@link Optional#empty()} if none match
+     */
+    public static Optional<Annotation> findFirstBySimpleName(List<Annotation> annotations, String simpleName) {
+        return annotations.stream()
+                .filter(ann -> isMetaAnnotated(ann.annotationType(), simpleName))
+                .findFirst();
+    }
+
+    /**
      * Returns all annotations present on {@code element} whose simple class name matches
      * any of the given names.
      * <p>
@@ -261,6 +280,41 @@ public final class AnnotationUtils {
     public static boolean isSwaggerAnnotation(Annotation ann, String simpleName) {
         return simpleName.equals(ann.annotationType().getSimpleName())
             && ann.annotationType().getPackageName().startsWith("io.swagger");
+    }
+
+    /**
+     * Finds the first Swagger annotation ({@code io.swagger} package) with the given simple name
+     * on a method, walking the full type hierarchy.
+     *
+     * <p>Combines {@link #getAllAnnotations(Method)} with {@link #isSwaggerAnnotation(Annotation, String)}
+     * to provide a single hierarchy-aware lookup. The most specific annotation wins — concrete
+     * method declarations take precedence over interface or superclass declarations.</p>
+     *
+     * @param method     the method to inspect; must not be {@code null}
+     * @param simpleName the Swagger annotation simple name (e.g. {@code "Operation"}, {@code "Parameter"})
+     * @return the first matching annotation, or {@link Optional#empty()} if not found
+     */
+    public static Optional<Annotation> findSwaggerAnnotation(Method method, String simpleName) {
+        return getAllAnnotations(method).stream()
+                .filter(ann -> isSwaggerAnnotation(ann, simpleName))
+                .findFirst();
+    }
+
+    /**
+     * Finds the first Swagger annotation ({@code io.swagger} package) with the given simple name
+     * in an annotation array.
+     *
+     * <p>Useful when the annotation set has already been computed — for example via
+     * {@link #getAllParameterAnnotations(Method, int)} — and no further hierarchy walk is needed.</p>
+     *
+     * @param annotations the annotation array to search; must not be {@code null}
+     * @param simpleName  the Swagger annotation simple name (e.g. {@code "Parameter"})
+     * @return the first matching annotation, or {@link Optional#empty()} if not found
+     */
+    public static Optional<Annotation> findSwaggerAnnotation(Annotation[] annotations, String simpleName) {
+        return Arrays.stream(annotations)
+                .filter(ann -> isSwaggerAnnotation(ann, simpleName))
+                .findFirst();
     }
 
     /**

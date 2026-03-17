@@ -173,7 +173,7 @@ public class ControllerProcessorImpl implements ControllerProcessor {
         }
 
         // Fall back to generic @RequestMapping
-        findBySimpleName(effectiveAnnotations, "RequestMapping").ifPresent(ann -> {
+        AnnotationUtils.findFirstBySimpleName(effectiveAnnotations, "RequestMapping").ifPresent(ann -> {
             String fullPath = PathUtils.joinPaths(basePath, AnnotationAttributeUtils.extractPath(ann));
             List<String> mappingHeaders = AnnotationAttributeUtils.getStringArrayValue(ann, "headers");
             List<PathItem.HttpMethod> httpMethods = resolveHttpMethods(ann);
@@ -195,7 +195,7 @@ public class ControllerProcessorImpl implements ControllerProcessor {
      * @return the normalised base path, or an empty string if no {@code @RequestMapping} is present
      */
     private String resolveBasePath(Class<?> controllerClass) {
-        return findBySimpleName(AnnotationUtils.getAllAnnotations(controllerClass), "RequestMapping")
+        return AnnotationUtils.findFirstBySimpleName(AnnotationUtils.getAllAnnotations(controllerClass), "RequestMapping")
                 .map(ann -> PathUtils.normalisePath(AnnotationAttributeUtils.extractPath(ann)))
                 .orElse("");
     }
@@ -358,29 +358,4 @@ public class ControllerProcessorImpl implements ControllerProcessor {
                 .anyMatch(p -> "header".equals(p.getIn()));
     }
 
-    // ------------------------------------------------------------------
-    // Annotation lookup
-    // ------------------------------------------------------------------
-
-    /**
-     * Finds the first annotation in the given list whose type is directly or
-     * transitively meta-annotated with an annotation matching the supplied
-     * simple name.
-     *
-     * <p>This allows detection of both direct Spring mapping annotations
-     * (e.g. {@code @GetMapping}) and composed annotations that are
-     * meta-annotated with them.</p>
-     *
-     * @param annotations the annotations to inspect; must not be {@code null}
-     * @param simpleName  the simple name of the target annotation
-     *                    (e.g. {@code "GetMapping"}, {@code "RequestMapping"});
-     *                    must not be {@code null}
-     * @return an {@link Optional} containing the first matching annotation,
-     *         or {@link Optional#empty()} if none match
-     */
-    private Optional<Annotation> findBySimpleName(List<Annotation> annotations, String simpleName) {
-        return annotations.stream()
-                .filter(ann -> AnnotationUtils.isMetaAnnotated(ann.annotationType(), simpleName))
-                .findFirst();
-    }
 }

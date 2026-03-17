@@ -348,9 +348,7 @@ public class ParameterProcessorImpl implements ParameterProcessor {
      * @return an {@link Optional} containing the explicit schema, or empty if none is defined
      */
     private Optional<Schema<?>> extractExplicitParameterSchema(Annotation[] annotations) {
-        return Arrays.stream(annotations)
-                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameter"))
-                .findFirst()
+        return AnnotationUtils.findSwaggerAnnotation(annotations, "Parameter")
                 .flatMap(ann -> AnnotationAttributeUtils.getAnnotationAttribute(ann, "schema"))
                 .flatMap(schemaAnn -> {
                     String type = AnnotationAttributeUtils.getStringAttribute(schemaAnn, "type");
@@ -385,12 +383,15 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                                      Annotation[] allAnnotations,
                                      Map<TypeVariable<?>, Type> typeVarMap,
                                      Optional<Schema<?>> schemaOverride) {
-        boolean isPath = "path".equals(location);
-
-        Parameter parameter = isPath ? new PathParameter() : new QueryParameter();
+        Parameter parameter = switch (location) {
+            case "path"   -> new PathParameter();
+            case "header" -> new HeaderParameter();
+            case "cookie" -> new CookieParameter();
+            default       -> new QueryParameter();
+        };
         parameter.setIn(location);
         parameter.setName(resolveName(param, mappingAnnotation));
-        parameter.setRequired(isPath || AnnotationAttributeUtils.getBooleanAttribute(mappingAnnotation, "required", false));
+        parameter.setRequired("path".equals(location) || AnnotationAttributeUtils.getBooleanAttribute(mappingAnnotation, "required", false));
         parameter.setSchema(schemaOverride.orElseGet(
                 () -> schemaProcessor.toSchema(TypeUtils.resolveType(param.getParameterizedType(), typeVarMap))));
 
@@ -475,9 +476,7 @@ public class ParameterProcessorImpl implements ParameterProcessor {
      * annotation with {@code hidden = true}.
      */
     private static boolean isHiddenSwaggerAnnotation(Annotation[] annotations) {
-        return Arrays.stream(annotations)
-                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameter"))
-                .findFirst()
+        return AnnotationUtils.findSwaggerAnnotation(annotations, "Parameter")
                 .map(ann -> AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false))
                 .orElse(false);
     }
@@ -493,13 +492,10 @@ public class ParameterProcessorImpl implements ParameterProcessor {
      * @param annotations the effective annotations on the method parameter
      */
     private static void enrichFromSwaggerAnnotation(Parameter parameter, Annotation[] annotations) {
-        Arrays.stream(annotations)
-                .filter(ann -> AnnotationUtils.isSwaggerAnnotation(ann, "Parameter"))
-                .findFirst()
+        AnnotationUtils.findSwaggerAnnotation(annotations, "Parameter")
                 .ifPresent(ann -> {
                     String description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
                     String example     = AnnotationAttributeUtils.getStringAttribute(ann, "example");
-                    boolean hidden     = AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false);
 
                     if (!description.isBlank()) parameter.setDescription(description);
                     if (!example.isBlank())     parameter.setExample(example);

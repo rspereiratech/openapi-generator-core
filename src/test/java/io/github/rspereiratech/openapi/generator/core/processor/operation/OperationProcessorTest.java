@@ -13,7 +13,12 @@ package io.github.rspereiratech.openapi.generator.core.processor.operation;
 import io.github.rspereiratech.openapi.generator.core.processor.parameter.ParameterProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.request.RequestBodyProcessor;
 import io.github.rspereiratech.openapi.generator.core.processor.response.ResponseProcessor;
+import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.extensions.Extension;
+import io.swagger.v3.oas.annotations.extensions.ExtensionProperty;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
@@ -111,6 +116,41 @@ class OperationProcessorTest {
         @GetMapping
         @Operation(tags = {"extra-tag", "another-tag"})
         public String operationWithExtraTags() { return ""; }
+
+        @GetMapping
+        @Operation(parameters = {
+                @io.swagger.v3.oas.annotations.Parameter(name = "tenantId", description = "The ID of the tenant"),
+                @io.swagger.v3.oas.annotations.Parameter(name = "status",   description = "Filter by status", example = "ACTIVE")
+        })
+        public String withOperationParameterDescriptions(
+                @PathVariable String tenantId,
+                @RequestParam(required = false) String status) { return ""; }
+
+        @GetMapping
+        @Operation(parameters = {
+                @io.swagger.v3.oas.annotations.Parameter(name = "id", description = "From @Operation array — must be ignored")
+        })
+        public String withInlineDescriptionWins(@PathVariable Long id) { return ""; }
+
+        @GetMapping
+        @Operation(externalDocs = @ExternalDocumentation(url = "https://docs.example.com", description = "API docs"))
+        public String withExternalDocs() { return ""; }
+
+        @GetMapping
+        @Operation(servers = @Server(url = "https://staging.example.com", description = "Staging"))
+        public String withServer() { return ""; }
+
+        @GetMapping
+        @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+        public String withSecurity() { return ""; }
+
+        @GetMapping
+        @Operation(extensions = @Extension(name = "x-custom", properties = @ExtensionProperty(name = "key", value = "val")))
+        public String withExtension() { return ""; }
+
+        @GetMapping
+        @Operation(deprecated = true)
+        public String deprecatedViaAnnotation() { return ""; }
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -321,6 +361,109 @@ class OperationProcessorTest {
         assertNotNull(op.getTags());
         assertTrue(op.getTags().contains("extra-tag"));
         assertTrue(op.getTags().contains("another-tag"));
+    }
+
+    // ==========================================================================
+    // @Operation.parameters[] — description and example enrichment
+    // ==========================================================================
+
+    @Test
+    void buildOperation_operationParametersArray_appliesDescriptionToMatchingParam() throws Exception {
+        Parameter tenantId = new Parameter().name("tenantId").in("path");
+        when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of(tenantId));
+
+        io.swagger.v3.oas.models.Operation op = processor.buildOperation(
+                method("withOperationParameterDescriptions", String.class, String.class), "GET", List.of());
+
+        Parameter param = op.getParameters().stream()
+                .filter(p -> "tenantId".equals(p.getName())).findFirst().orElseThrow();
+        assertEquals("The ID of the tenant", param.getDescription());
+    }
+
+    @Test
+    void buildOperation_operationParametersArray_appliesExampleToMatchingParam() throws Exception {
+        Parameter status = new Parameter().name("status").in("query");
+        when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of(status));
+
+        io.swagger.v3.oas.models.Operation op = processor.buildOperation(
+                method("withOperationParameterDescriptions", String.class, String.class), "GET", List.of());
+
+        Parameter param = op.getParameters().stream()
+                .filter(p -> "status".equals(p.getName())).findFirst().orElseThrow();
+        assertEquals("ACTIVE", param.getExample());
+    }
+
+    @Test
+    void buildOperation_operationParametersArray_doesNotOverrideExistingDescription() throws Exception {
+        Parameter id = new Parameter().name("id").in("path").description("Inline wins");
+        when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of(id));
+
+        io.swagger.v3.oas.models.Operation op = processor.buildOperation(
+                method("withInlineDescriptionWins", Long.class), "GET", List.of());
+
+        assertEquals("Inline wins", op.getParameters().get(0).getDescription(),
+                "@Operation.parameters[] must not override a description already set by the concrete @Parameter");
+    }
+
+    @Test
+    void buildOperation_operationParametersArray_noMatchingParam_descriptionNotSet() throws Exception {
+        Parameter other = new Parameter().name("otherId").in("path");
+        when(parameterProcessor.processParameters(any(), any(), any())).thenReturn(List.of(other));
+
+        io.swagger.v3.oas.models.Operation op = processor.buildOperation(
+                method("withOperationParameterDescriptions", String.class, String.class), "GET", List.of());
+
+        assertNull(op.getParameters().get(0).getDescription(),
+                "Description must not be set when parameter name does not match any @Operation.parameters[] entry");
+    }
+
+    // ==========================================================================
+    // @Operation — externalDocs, servers, security, extensions, deprecated
+    // ==========================================================================
+
+    @Test
+    void swaggerOperation_externalDocs_urlAndDescriptionSet() throws Exception {
+        io.swagger.v3.oas.models.Operation op =
+                processor.buildOperation(method("withExternalDocs"), "GET", List.of());
+        assertNotNull(op.getExternalDocs(), "externalDocs must be set");
+        assertEquals("https://docs.example.com", op.getExternalDocs().getUrl());
+        assertEquals("API docs", op.getExternalDocs().getDescription());
+    }
+
+    @Test
+    void swaggerOperation_servers_serverPresent() throws Exception {
+        io.swagger.v3.oas.models.Operation op =
+                processor.buildOperation(method("withServer"), "GET", List.of());
+        assertNotNull(op.getServers(), "servers must not be null");
+        assertFalse(op.getServers().isEmpty(), "servers must not be empty");
+        assertEquals("https://staging.example.com", op.getServers().get(0).getUrl());
+    }
+
+    @Test
+    void swaggerOperation_security_requirementPresent() throws Exception {
+        io.swagger.v3.oas.models.Operation op =
+                processor.buildOperation(method("withSecurity"), "GET", List.of());
+        assertNotNull(op.getSecurity(), "security must not be null");
+        assertFalse(op.getSecurity().isEmpty(), "security must not be empty");
+        assertTrue(op.getSecurity().get(0).containsKey("bearerAuth"),
+                "security requirement 'bearerAuth' must be present");
+    }
+
+    @Test
+    void swaggerOperation_extensions_keyPresent() throws Exception {
+        io.swagger.v3.oas.models.Operation op =
+                processor.buildOperation(method("withExtension"), "GET", List.of());
+        assertNotNull(op.getExtensions(), "extensions must not be null");
+        assertTrue(op.getExtensions().containsKey("x-custom.key"),
+                "extension key 'x-custom.key' must be present; got: " + op.getExtensions().keySet());
+    }
+
+    @Test
+    void swaggerOperation_deprecatedTrue_setsFlag() throws Exception {
+        io.swagger.v3.oas.models.Operation op =
+                processor.buildOperation(method("deprecatedViaAnnotation"), "GET", List.of());
+        assertTrue(Boolean.TRUE.equals(op.getDeprecated()),
+                "@Operation(deprecated = true) must set operation.deprecated = true");
     }
 
     // ==========================================================================

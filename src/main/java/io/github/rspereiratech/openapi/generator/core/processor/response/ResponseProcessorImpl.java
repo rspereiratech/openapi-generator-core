@@ -15,6 +15,9 @@ import io.github.rspereiratech.openapi.generator.core.processor.response.resolve
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationAttributeUtils;
 import io.github.rspereiratech.openapi.generator.core.utils.AnnotationUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -61,6 +64,9 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     /** Default media type for response bodies — mirrors {@code springdoc.default-produces-media-type}. */
     private static final String FALLBACK_PRODUCES_MEDIA_TYPE = "*/*";
 
+    /** Shared {@link ObjectMapper} instance; avoids allocating a new one per {@link #parseJsonValue} call. */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     /** Shared {@link SchemaProcessor} used to derive response schemas from method return types. */
     private final SchemaProcessor    schemaProcessor;
     /** Strategy for resolving HTTP status codes and their descriptions. */
@@ -99,6 +105,11 @@ public class ResponseProcessorImpl implements ResponseProcessor {
                 ? FALLBACK_PRODUCES_MEDIA_TYPE : defaultProducesMediaType;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException if {@code method}, {@code httpMethod}, or {@code typeVarMap} is {@code null}
+     */
     @Override
     public ApiResponses processResponses(Method method, String httpMethod,
                                           Map<TypeVariable<?>, Type> typeVarMap) {
@@ -265,9 +276,64 @@ public class ResponseProcessorImpl implements ResponseProcessor {
         if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
         if (schema == null) return null;
 
+        MediaType mediaTypeObj = new MediaType().schema(schema);
+        applyExamples(contentAnn, mediaTypeObj);
+
         Content content = new Content();
-        content.addMediaType(mediaType, new MediaType().schema(schema));
+        content.addMediaType(mediaType, mediaTypeObj);
         return content;
+    }
+
+    /**
+     * Reads the {@code examples} attribute from a Swagger {@code @Content} annotation and
+     * applies them to the given {@link MediaType}.
+     *
+     * <p>Each {@code @ExampleObject} in the array is read; entries whose {@code name} is blank
+     * are silently skipped. Non-blank fields ({@code summary}, {@code description}, {@code value},
+     * {@code externalValue}) are set on the resulting {@link Example} model object.</p>
+     *
+     * @param contentAnn   the Swagger {@code @Content} annotation; must not be {@code null}
+     * @param mediaTypeObj the {@link MediaType} to enrich; must not be {@code null}
+     */
+    private static void applyExamples(Annotation contentAnn, MediaType mediaTypeObj) {
+        List<Annotation> examplesArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(contentAnn, "examples");
+        for (Annotation exampleAnn : examplesArr) {
+            String name = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "name");
+            if (name.isBlank()) continue;
+
+            Example example = new Example();
+            String summary       = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "summary");
+            String description   = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "description");
+            String value         = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "value");
+            String externalValue = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "externalValue");
+
+            if (!summary.isBlank())       example.setSummary(summary);
+            if (!description.isBlank())   example.setDescription(description);
+            if (!value.isBlank())         example.setValue(parseJsonValue(value));
+            if (!externalValue.isBlank()) example.setExternalValue(externalValue);
+
+            mediaTypeObj.addExamples(name, example);
+        }
+    }
+
+    /**
+     * Attempts to parse {@code raw} as a JSON value using Jackson.
+     *
+     * <p>When {@code raw} is valid JSON (object, array, or scalar), the resulting
+     * {@link JsonNode} is returned so that the YAML serializer emits it as structured
+     * YAML rather than as a plain quoted string.  If parsing fails the raw string is
+     * returned unchanged as a fallback.</p>
+     *
+     * @param raw the raw string value from an {@code @ExampleObject}; must not be {@code null}
+     * @return a {@link JsonNode} if {@code raw} is valid JSON, otherwise the original string
+     */
+    private static Object parseJsonValue(String raw) {
+        try {
+            return OBJECT_MAPPER.readValue(raw, JsonNode.class);
+        } catch (Exception e) {
+            log.debug("Example value is not valid JSON, using raw string: {}", e.getMessage());
+            return raw;
+        }
     }
 
     /**

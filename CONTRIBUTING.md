@@ -108,7 +108,7 @@ public class LengthConstraintHandler implements ConstraintHandler {
 
 ### 2. Wire it into `ValidationSchemaEnricher`
 
-Pass the handler via a custom `ProcessorFactory` (see [Extension-Points.md](docs/Extension-Points.md#5-custom-constraint-handler)).
+Pass the handler via a custom `ProcessorFactory` (see [Extension-Points.md](docs/Extension-Points.md#4-custom-constraint-handler)).
 
 ### 3. Write tests
 
@@ -132,18 +132,21 @@ public class MyPostProcessor implements PostProcessor {
 }
 ```
 
-### 2. Register in `OpenApiGeneratorImpl`
+### 2. Register in `DefaultProcessorFactory`
 
-Add your post-processor to the list in `OpenApiGeneratorImpl`:
+Add your post-processor to the list in `DefaultProcessorFactory.createPostProcessors()`:
 
 ```java
-List<PostProcessor> postProcessors = List.of(
-    new SchemaRegistryMergePostProcessor(registry),
-    new PruneUnreferencedSchemasPostProcessor(),
-    new SortSpecPostProcessor(config.sortOutput()),
-    new UniqueOperationIdPostProcessor(),
-    new MyPostProcessor()   // add here
-);
+@Override
+public List<PostProcessor> createPostProcessors(SchemaProcessor schemaProcessor, boolean sortOutput) {
+    return List.of(
+        new SchemaRegistryMergePostProcessor(schemaProcessor),
+        new PruneUnreferencedSchemasPostProcessor(),
+        new SortSpecPostProcessor(sortOutput),
+        new UniqueOperationIdPostProcessor(),
+        new MyPostProcessor()   // add here
+    );
+}
 ```
 
 ### 3. Write tests
@@ -181,5 +184,4 @@ Always write a test that verifies the annotation is correctly resolved in the ge
 1. Fork the repository and create a branch from `master`.
 2. Implement your changes with tests.
 3. Ensure `mvn test` passes.
-4. Update `CHANGELOG.md` under a new version entry.
-5. Open a pull request with a clear description of what was added and why.
+4. Open a pull request with a clear description of what was added and why.

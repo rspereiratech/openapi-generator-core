@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -41,8 +42,9 @@ import static org.mockito.Mockito.verify;
  *
  * <p>Covers detection of {@code @RequestBody}-annotated parameters, the {@code required}
  * flag, media-type resolution from {@code consumes} attributes, schema delegation,
- * configurable default consumes media type, and Swagger {@code @RequestBody} override
- * via {@code @Schema(implementation=...)}.
+ * configurable default consumes media type, Swagger {@code @RequestBody} override
+ * via {@code @Schema(implementation=...)}, and description/schema resolution from
+ * {@code @Operation.requestBody} as a fallback.
  */
 @ExtendWith(MockitoExtension.class)
 class RequestBodyProcessorTest {
@@ -92,6 +94,19 @@ class RequestBodyProcessorTest {
         public String withSwaggerRequestBodyDescription(
                 @io.swagger.v3.oas.annotations.parameters.RequestBody(
                         description = "List of items to process")
+                @org.springframework.web.bind.annotation.RequestBody String body) { return ""; }
+
+        @Operation(requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "The set of supervisor ids to provision"))
+        @PostMapping
+        public String withOperationRequestBodyDescription(
+                @org.springframework.web.bind.annotation.RequestBody java.util.Set<String> ids) { return ""; }
+
+        @Operation(requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "Operation-level description — must lose"))
+        @PostMapping
+        public String withInlineWinsOverOperation(
+                @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Inline wins")
                 @org.springframework.web.bind.annotation.RequestBody String body) { return ""; }
     }
 
@@ -198,6 +213,28 @@ class RequestBodyProcessorTest {
         var result = processor.processRequestBody(method("withBody", String.class));
         assertTrue(result.isPresent());
         assertNull(result.get().getDescription());
+    }
+
+    // ==========================================================================
+    // @Operation.requestBody fallback
+    // ==========================================================================
+
+    @Test
+    void operationRequestBodyDescription_appliedWhenNoInlineSwaggerAnnotation() throws Exception {
+        var result = processor.processRequestBody(
+                method("withOperationRequestBodyDescription", java.util.Set.class));
+        assertTrue(result.isPresent());
+        assertEquals("The set of supervisor ids to provision", result.get().getDescription(),
+                "@Operation.requestBody description must be used when no inline Swagger @RequestBody is present");
+    }
+
+    @Test
+    void inlineSwaggerRequestBody_winsOverOperationRequestBody() throws Exception {
+        var result = processor.processRequestBody(
+                method("withInlineWinsOverOperation", String.class));
+        assertTrue(result.isPresent());
+        assertEquals("Inline wins", result.get().getDescription(),
+                "Inline @RequestBody on parameter must take priority over @Operation.requestBody");
     }
 
     // ==========================================================================

@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -250,6 +251,38 @@ class ResponseProcessorTest {
                     content = @io.swagger.v3.oas.annotations.media.Content)
         })
         public String apiResponse_2xx_emptyContent_and_4xx_emptyContent() { return ""; }
+
+        // examples / example fixtures
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class),
+                        examples = {
+                            @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    name = "example1",
+                                    summary = "First example",
+                                    description = "A detailed description",
+                                    value = "{\"key\":\"value\"}"),
+                            @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    name = "example2",
+                                    externalValue = "https://example.com/example2.json")
+                        }))
+        public String apiResponseWithNamedExamples() { return ""; }
+
+        @GetMapping
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                content = @io.swagger.v3.oas.annotations.media.Content(
+                        schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class),
+                        examples = {
+                            @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    name = "",
+                                    value = "should be skipped")
+                        }))
+        public String apiResponseWithBlankNameExample() { return ""; }
+
     }
 
     private Method method(String name, Class<?>... params) throws Exception {
@@ -681,4 +714,45 @@ class ResponseProcessorTest {
         assertEquals("default response", responses.get("default").getDescription(),
                 "Blank description on a 'default' response must fall back to 'default response'");
     }
+
+    // ==========================================================================
+    // @Content with named examples (@ExampleObject array)
+    // ==========================================================================
+
+    @Test
+    void apiResponseWithNamedExamples_examplesMapIsPopulated() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithNamedExamples"), "GET");
+        var examples = responses.get("200").getContent().get("*/*").getExamples();
+        assertNotNull(examples, "MediaType.examples must not be null when @ExampleObject entries are declared");
+        assertEquals(2, examples.size(), "Both named examples must be present in the examples map");
+    }
+
+    @Test
+    void apiResponseWithNamedExamples_firstExampleFieldsAreSet() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithNamedExamples"), "GET");
+        var example1 = responses.get("200").getContent().get("*/*").getExamples().get("example1");
+        assertNotNull(example1, "example1 must be present in the examples map");
+        assertAll(
+                () -> assertEquals("First example",          example1.getSummary()),
+                () -> assertEquals("A detailed description", example1.getDescription()),
+                () -> assertEquals("{\"key\":\"value\"}",    Objects.toString(example1.getValue()))
+        );
+    }
+
+    @Test
+    void apiResponseWithNamedExamples_secondExampleExternalValueIsSet() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithNamedExamples"), "GET");
+        var example2 = responses.get("200").getContent().get("*/*").getExamples().get("example2");
+        assertNotNull(example2, "example2 must be present in the examples map");
+        assertEquals("https://example.com/example2.json", example2.getExternalValue());
+    }
+
+    @Test
+    void apiResponseWithBlankNameExample_examplesMapIsEmpty() throws Exception {
+        ApiResponses responses = processor.processResponses(method("apiResponseWithBlankNameExample"), "GET");
+        var examples = responses.get("200").getContent().get("*/*").getExamples();
+        assertTrue(examples == null || examples.isEmpty(),
+                "An @ExampleObject with a blank name must be skipped and not added to the examples map");
+    }
+
 }

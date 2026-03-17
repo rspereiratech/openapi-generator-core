@@ -12,6 +12,8 @@ package io.github.rspereiratech.openapi.generator.core.processor.parameter;
 
 import io.github.rspereiratech.openapi.generator.core.processor.schema.SchemaProcessor;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.CookieParameter;
+import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -214,6 +216,20 @@ class ParameterProcessorTest {
         List<Parameter> params = processor.processParameters(method("withCookieValue", String.class));
         assertEquals(1, params.size());
         assertEquals("cookie", params.get(0).getIn());
+    }
+
+    @Test
+    void requestHeader_producesHeaderParameter() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withRequestHeader", String.class));
+        assertTrue(params.get(0) instanceof HeaderParameter,
+                "@RequestHeader must produce a HeaderParameter, not " + params.get(0).getClass().getSimpleName());
+    }
+
+    @Test
+    void cookieValue_producesCookieParameter() throws Exception {
+        List<Parameter> params = processor.processParameters(method("withCookieValue", String.class));
+        assertTrue(params.get(0) instanceof CookieParameter,
+                "@CookieValue must produce a CookieParameter, not " + params.get(0).getClass().getSimpleName());
     }
 
     // ==========================================================================
