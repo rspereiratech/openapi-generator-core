@@ -181,7 +181,7 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
         var contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(requestBodyAnn, "content");
         if (contentArr.isEmpty()) return Optional.empty();
 
-        return AnnotationAttributeUtils.getAnnotationAttribute(contentArr.getFirst(), "schema")
+        return AnnotationAttributeUtils.getAnnotationAttribute(contentArr.get(0), "schema")
                 .flatMap(schemaAnn -> AnnotationAttributeUtils.getClassAttribute(schemaAnn, "implementation"))
                 .filter(c -> c != Void.class);
     }

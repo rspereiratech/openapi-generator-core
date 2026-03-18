@@ -141,7 +141,8 @@ public class ValidationSchemaEnricher implements SchemaEnricher {
         if (schemas == null || schemas.isEmpty()) return;
 
         SchemaEnricherSupport.collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
-            if (!(schemas.get(clazz.getSimpleName()) instanceof Schema<?> schema)) return;
+            Object schemaObj = schemas.get(clazz.getSimpleName());
+            if (!(schemaObj instanceof Schema<?> schema)) return;
             if (schema.getProperties() == null) return;
             applyConstraintsFromClass(clazz, schema);
         });

@@ -65,7 +65,7 @@ public final class AnnotationAttributeUtils {
                 .map(attr -> getStringArrayValue(annotation, attr))
                 .filter(Predicate.not(List::isEmpty))
                 .findFirst()
-                .map(List::getFirst)
+                .map(list -> list.get(0))
                 .orElse("");
     }
 

@@ -168,14 +168,14 @@ public class PageTypeSchemaHandler implements TypeSchemaHandler {
      * @return a non-empty simple name suitable for use in a schema key
      */
     private String schemaNameFor(Type type) {
-        return switch (type) {
-            case Class<?> c                                                       -> c.getSimpleName();
-            case ParameterizedType pt when pt.getRawType() instanceof Class<?> c -> c.getSimpleName();
-            default -> {
-                String name = type.getTypeName();
-                int dot = name.lastIndexOf('.');
-                yield dot >= 0 ? name.substring(dot + 1) : name;
-            }
-        };
+        if (type instanceof Class<?> c) {
+            return c.getSimpleName();
+        }
+        if (type instanceof ParameterizedType pt && pt.getRawType() instanceof Class<?> c) {
+            return c.getSimpleName();
+        }
+        String name = type.getTypeName();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 ? name.substring(dot + 1) : name;
     }
 }

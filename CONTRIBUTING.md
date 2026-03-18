@@ -20,7 +20,7 @@ This module contains all the generation logic. The most common types of contribu
 
 ## Prerequisites
 
-- Java 21+
+- Java 17+
 - Maven 3.9+
 - `openapi-generator-parent` installed locally
 

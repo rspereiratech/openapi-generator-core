@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml/badge.svg)](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Java 21](https://img.shields.io/badge/Java-21-blue?logo=openjdk)](https://openjdk.org/projects/jdk/21/)
+[![Java 17](https://img.shields.io/badge/Java-17+-blue?logo=openjdk)](https://openjdk.org/projects/jdk/17/)
 [![Spring](https://img.shields.io/badge/Spring-6DB33F?logo=spring&logoColor=white)](https://spring.io)
 [![OpenAPI 3.0](https://img.shields.io/badge/OpenAPI-3.0-green?logo=openapiinitiative)](https://swagger.io/specification/)
 ![REST API](https://img.shields.io/badge/REST-API-blue)
@@ -85,7 +85,7 @@ OpenApiWriter             → serialises to YAML or JSON
 
 | Tool | Version |
 |---|---|
-| Java | 21+ |
+| Java | 17+ |
 | Maven | 3.9+ |
 
 ---

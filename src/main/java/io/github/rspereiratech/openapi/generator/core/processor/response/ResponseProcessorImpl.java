@@ -220,7 +220,7 @@ public class ResponseProcessorImpl implements ResponseProcessor {
             return is2xx(responseCode) ? buildContentFromReturnType(method, typeVarMap) : null;
         }
 
-        Content fromAnnotation = buildContentFromAnnotation(contentArr.getFirst(), method, typeVarMap);
+        Content fromAnnotation = buildContentFromAnnotation(contentArr.get(0), method, typeVarMap);
         // Empty @Content on 2xx — Rule 2: infer schema from return type
         if (fromAnnotation == null && is2xx(responseCode)) {
             return buildContentFromReturnType(method, typeVarMap);
