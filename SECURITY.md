@@ -17,5 +17,3 @@ Please include:
 - Steps to reproduce the issue
 - Potential impact
 - Any suggested fixes (optional)
-
-You can expect an acknowledgement within **72 hours** and a resolution or mitigation plan within **14 days**, depending on severity.
