@@ -173,26 +173,29 @@ public final class AnnotationUtils {
     }
 
     /**
-     * Collects <em>all</em> annotations from {@code clazz} and its full type
-     * hierarchy whose annotation type (or a meta-annotation) has the given
-     * simple name.
+     * Collects annotations matching {@code simpleName} from the <em>first</em> level
+     * of the type hierarchy that declares any, walking {@code clazz} → superclass
+     * chain → interfaces (matching the order of {@link TypeUtils#getAncestorTypes}).
      *
-     * <p>Unlike {@link #getAllAnnotations(Class)}, this method does <b>not</b>
-     * deduplicate by annotation type.  Every matching annotation found at each
-     * level of the hierarchy is included, allowing callers to accumulate values
-     * from multiple declarations spread across different interfaces — for example
-     * two {@code @Tag} annotations on a generic base interface and a specific
-     * child interface.
+     * <p>Once a level contributes at least one match, the walk stops — ancestors
+     * further out are not consulted. This mirrors Swagger Core's
+     * {@code ReflectionUtils.getRepeatableAnnotationsArray}: a child's declaration
+     * fully overrides an ancestor's, rather than being merged with it.
+     *
+     * <p>If no level declares a matching annotation, an empty list is returned.
      *
      * @param clazz      the class to inspect
      * @param simpleName the simple name to match (e.g. {@code "Tag"})
-     * @return all matching annotations in hierarchy order (class first, then ancestors)
+     * @return matches from the most-specific declaring level, or empty list if none
      */
     public static List<Annotation> collectAllBySimpleName(Class<?> clazz, String simpleName) {
         return Stream.concat(Stream.of(clazz), TypeUtils.getAncestorTypes(clazz).stream())
-                .flatMap(c -> Arrays.stream(c.getAnnotations()))
-                .filter(ann -> isMetaAnnotated(ann.annotationType(), simpleName))
-                .toList();
+                .map(c -> Arrays.stream(c.getAnnotations())
+                        .filter(ann -> isMetaAnnotated(ann.annotationType(), simpleName))
+                        .toList())
+                .filter(list -> !list.isEmpty())
+                .findFirst()
+                .orElse(List.of());
     }
 
     /**

@@ -203,10 +203,13 @@ public class ControllerProcessorImpl implements ControllerProcessor {
     /**
      * Resolves the OpenAPI tags for a controller class.
      *
-     * <p>Collects all {@code @Tag} annotations (including inherited and meta-annotated ones),
-     * registers each unique non-blank tag name in the {@link OpenAPI} model, and returns them
-     * in declaration order. If no {@code @Tag} annotations are found, falls back to a tag
-     * derived from the controller's simple class name via {@link #deriveTagName}.</p>
+     * <p>Uses the {@code @Tag} annotations declared at the most-specific level of the type
+     * hierarchy that declares any (controller class → superclasses → interfaces, mirroring
+     * Swagger Core semantics). A child interface's or subclass's {@code @Tag} fully overrides
+     * an ancestor's — the two are <b>not</b> merged.
+     *
+     * <p>If no {@code @Tag} annotations are found anywhere in the hierarchy, falls back to a
+     * tag derived from the controller's simple class name via {@link #deriveTagName}.
      *
      * @param controllerClass the controller class to inspect
      * @param openAPI         the OpenAPI model to register discovered tags into

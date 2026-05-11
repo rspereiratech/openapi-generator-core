@@ -46,8 +46,9 @@ import static org.mockito.Mockito.verify;
  * Unit tests for {@link ControllerProcessorImpl}.
  *
  * <p>Covers path registration, HTTP verb mapping, tag derivation, annotation
- * inheritance from interfaces and abstract superclasses, and multi-tag hierarchy
- * resolution. Uses a mock {@link OperationProcessor} to isolate the controller
+ * inheritance from interfaces and abstract superclasses, and the
+ * child-overrides-ancestor rule for {@code @Tag} resolution (Swagger-equivalent
+ * semantics). Uses a mock {@link OperationProcessor} to isolate the controller
  * processing logic.
  */
 @ExtendWith(MockitoExtension.class)
@@ -151,17 +152,13 @@ class ControllerProcessorTest {
     }
 
     // ==========================================================================
-    // Fixtures — multi-tag hierarchy (abstract class + specific interface)
+    // Fixtures — child-overrides-ancestor @Tag resolution
     //
-    // Mirrors the real service pattern:
-    //   GenericVertexRestController<T,ID>      @Tag("Generic REST API")
-    //     implemented by AbstractVertexController<T,ID>
-    //       extended by AgentFixtureController
-    //   AgentFixtureApi extends GenericVertexRestController<T,ID>  @Tag("Agents")
-    //     implemented by AgentFixtureController
-    //
-    // GenericVertexRestController is reachable via BOTH the superclass chain and
-    // the direct interface list — the scenario that triggered the multi-tag bug.
+    // Two scenarios, both expected to surface only the most-specific @Tag:
+    //   (a) interface hierarchy: AgentFixtureApi extends GenericVertexFixtureController
+    //       Both interfaces declare @Tag → only AgentFixtureApi's wins.
+    //   (b) class hierarchy:     TaggedChildFixture extends TaggedParentFixture
+    //       Both classes declare @Tag → only TaggedChildFixture's wins.
     // ==========================================================================
 
     @Tag(name = "Generic REST API", description = "Generic CRUD operations")
@@ -171,12 +168,6 @@ class ControllerProcessorTest {
         @GetMapping          List<T> getAll();
     }
 
-    abstract static class AbstractVertexFixtureController<T, ID>
-            implements GenericVertexFixtureController<T, ID> {
-        @Override public T      getById(ID id) { return null; }
-        @Override public List<T> getAll()      { return List.of(); }
-    }
-
     @Tag(name = "Agents", description = "Agent management")
     interface AgentFixtureApi extends GenericVertexFixtureController<String, String> {
         @GetMapping("/{id}/group") String getAgentGroup(@PathVariable String id);
@@ -184,12 +175,22 @@ class ControllerProcessorTest {
 
     @RestController
     @RequestMapping("/api/v1/agents")
-    static class AgentFixtureController
-            extends AbstractVertexFixtureController<String, String>
-            implements AgentFixtureApi {
+    static class AgentFixtureController implements AgentFixtureApi {
         @Override public String       getById(String id)       { return "agent"; }
         @Override public List<String> getAll()                 { return List.of(); }
         @Override public String       getAgentGroup(String id) { return "group"; }
+    }
+
+    @Tag(name = "ParentClassTag", description = "Generic class-level tag")
+    @RequestMapping("/api/v1/tagged")
+    abstract static class TaggedParentFixture {
+        @GetMapping public abstract String list();
+    }
+
+    @RestController
+    @Tag(name = "ChildClassTag", description = "Specific class-level tag")
+    static class TaggedChildFixture extends TaggedParentFixture {
+        @Override public String list() { return ""; }
     }
 
     // ==========================================================================
@@ -374,14 +375,13 @@ class ControllerProcessorTest {
     }
 
     // ==========================================================================
-    // process() — multi-tag hierarchy (abstract class + specific interface)
+    // process() — child-overrides-ancestor @Tag resolution
     // ==========================================================================
 
     @Test
-    void process_multiTagHierarchy_bothTagsRegistered() {
-        // AgentFixtureController extends AbstractVertexFixtureController (→ GenericVertexFixtureController @Tag)
-        //   implements AgentFixtureApi (→ GenericVertexFixtureController @Tag + own @Tag("Agents"))
-        // Both @Tag values must appear in openAPI.getTags().
+    void process_childInterfaceOverridesParentInterface_onlyChildTagRegistered() {
+        // AgentFixtureApi @Tag("Agents") extends GenericVertexFixtureController @Tag("Generic REST API").
+        // Only the child interface's tag must win.
         OpenAPI openAPI = new OpenAPI();
         processor.process(AgentFixtureController.class, openAPI);
 
@@ -389,14 +389,14 @@ class ControllerProcessorTest {
         List<String> tagNames = openAPI.getTags().stream()
                 .map(io.swagger.v3.oas.models.tags.Tag::getName)
                 .toList();
-        Assertions.assertTrue(tagNames.contains("Generic REST API"),
-                "'Generic REST API' from GenericVertexFixtureController must be registered");
         Assertions.assertTrue(tagNames.contains("Agents"),
                 "'Agents' from AgentFixtureApi must be registered");
+        Assertions.assertFalse(tagNames.contains("Generic REST API"),
+                "Parent interface's @Tag must be shadowed by the child's");
     }
 
     @Test
-    void process_multiTagHierarchy_bothTagsPassedToBuildOperation() {
+    void process_childInterfaceOverridesParentInterface_onlyChildTagPassedToBuildOperation() {
         OpenAPI openAPI = new OpenAPI();
         processor.process(AgentFixtureController.class, openAPI);
 
@@ -404,14 +404,16 @@ class ControllerProcessorTest {
         ArgumentCaptor<Collection<String>> tagsCaptor = ArgumentCaptor.forClass(Collection.class);
         verify(operationProcessor, atLeastOnce()).buildOperation(any(), anyString(), tagsCaptor.capture(), any(), any());
         Collection<String> captured = tagsCaptor.getValue();
-        Assertions.assertTrue(captured.contains("Generic REST API"),
-                "buildOperation must receive 'Generic REST API'");
         Assertions.assertTrue(captured.contains("Agents"),
                 "buildOperation must receive 'Agents'");
+        Assertions.assertFalse(captured.contains("Generic REST API"),
+                "buildOperation must not receive the shadowed parent tag");
     }
 
     @Test
-    void process_multiTagHierarchy_genericPathsPresent() {
+    void process_childInterfaceOverridesParentInterface_inheritedPathsPresent() {
+        // Paths declared on GenericVertexFixtureController must still be inherited
+        // even though its @Tag is shadowed.
         OpenAPI openAPI = new OpenAPI();
         processor.process(AgentFixtureController.class, openAPI);
 
@@ -419,21 +421,27 @@ class ControllerProcessorTest {
         Assertions.assertNotNull(paths);
         Assertions.assertAll(
                 "Paths from GenericVertexFixtureController must be present",
-                () -> Assertions.assertTrue(paths.containsKey("/api/v1/agents"),       "Expected /api/v1/agents"),
-                () -> Assertions.assertTrue(paths.containsKey("/api/v1/agents/{id}"),  "Expected /api/v1/agents/{id}")
+                () -> Assertions.assertTrue(paths.containsKey("/api/v1/agents"),            "Expected /api/v1/agents"),
+                () -> Assertions.assertTrue(paths.containsKey("/api/v1/agents/{id}"),       "Expected /api/v1/agents/{id}"),
+                () -> Assertions.assertTrue(paths.containsKey("/api/v1/agents/{id}/group"), "Expected /api/v1/agents/{id}/group")
         );
     }
 
     @Test
-    void process_multiTagHierarchy_specificInterfaceMethodPathPresent() {
-        // getAgentGroup is declared only on AgentFixtureApi, not on the generic base.
+    void process_childClassOverridesParentClass_onlyChildTagRegistered() {
+        // TaggedChildFixture @Tag("ChildClassTag") extends TaggedParentFixture @Tag("ParentClassTag").
+        // The same child-overrides rule must apply at the class level.
         OpenAPI openAPI = new OpenAPI();
-        processor.process(AgentFixtureController.class, openAPI);
+        processor.process(TaggedChildFixture.class, openAPI);
 
-        Paths paths = openAPI.getPaths();
-        Assertions.assertNotNull(paths);
-        Assertions.assertTrue(paths.containsKey("/api/v1/agents/{id}/group"),
-                "Agent-specific path /{id}/group must be present");
+        Assertions.assertNotNull(openAPI.getTags(), "Tags list must not be null");
+        List<String> tagNames = openAPI.getTags().stream()
+                .map(io.swagger.v3.oas.models.tags.Tag::getName)
+                .toList();
+        Assertions.assertTrue(tagNames.contains("ChildClassTag"),
+                "'ChildClassTag' from TaggedChildFixture must be registered");
+        Assertions.assertFalse(tagNames.contains("ParentClassTag"),
+                "Parent class's @Tag must be shadowed by the child's");
     }
 
     // ==========================================================================
