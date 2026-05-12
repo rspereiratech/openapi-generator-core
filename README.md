@@ -1,6 +1,6 @@
 # openapi-generator-core
 
-[![Build](https://img.shields.io/github/actions/workflow/status/rspereiratech/openapi-generator-core/ci.yml?branch=master&label=Build)](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/rspereiratech/openapi-generator-core/build.yml?branch=master&label=Build)](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/build.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/rspereiratech/openapi-generator-core/codeql.yml?branch=master&label=CodeQL)](https://github.com/rspereiratech/openapi-generator-core/security/code-scanning)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Java 17](https://img.shields.io/badge/Java-17+-blue?logo=openjdk)](https://openjdk.org/projects/jdk/17/)
