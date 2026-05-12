@@ -11,17 +11,22 @@
 package io.github.rspereiratech.openapi.generator.core.postprocessor;
 
 import com.google.common.base.Preconditions;
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
- * {@link PostProcessor} that sorts the {@code paths} section and the
- * {@code responses} map of every operation alphabetically, producing a
- * deterministic spec regardless of controller discovery order or JVM behaviour.
+ * {@link PostProcessor} that sorts the {@code paths} section, the {@code responses}
+ * map of every operation, and the {@code components/schemas} map alphabetically,
+ * producing a deterministic spec regardless of controller discovery order or JVM
+ * behaviour.
  *
  * <h3>What is sorted</h3>
  * <ul>
@@ -29,6 +34,8 @@ import java.util.List;
  *       (e.g. {@code /agents} before {@code /queues}).</li>
  *   <li><b>Responses</b> — HTTP status-code keys within each operation sorted
  *       lexicographically (e.g. {@code "200"} before {@code "404"}).</li>
+ *   <li><b>Schemas</b> — keys of {@code components/schemas} (the DTOs) sorted
+ *       alphabetically (e.g. {@code AgentDto} before {@code UserDto}).</li>
  * </ul>
  *
  * <p>Without explicit sorting, both orderings depend on the sequence in which
@@ -63,9 +70,10 @@ public class SortSpecPostProcessor implements PostProcessor {
     }
 
     /**
-     * Sorts the {@code paths} block and the {@code responses} map of every
-     * operation when {@code sortOutput} is {@code true}. When {@code sortOutput}
-     * is {@code false} this method returns immediately without modifying the model.
+     * Sorts the {@code paths} block, the {@code responses} map of every operation,
+     * and the {@code components/schemas} map when {@code sortOutput} is {@code true}.
+     * When {@code sortOutput} is {@code false} this method returns immediately
+     * without modifying the model.
      *
      * @param openAPI the OpenAPI model to process; must not be {@code null}
      * @throws NullPointerException if {@code openAPI} is {@code null}
@@ -73,9 +81,12 @@ public class SortSpecPostProcessor implements PostProcessor {
     @Override
     public void process(OpenAPI openAPI) {
         Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");
-        if (!sortOutput) return;
+        if (!sortOutput) {
+            return;
+        }
         sortPaths(openAPI);
         sortResponses(openAPI);
+        sortSchemas(openAPI);
     }
 
     /**
@@ -85,7 +96,9 @@ public class SortSpecPostProcessor implements PostProcessor {
      */
     private void sortPaths(OpenAPI openAPI) {
         Paths paths = openAPI.getPaths();
-        if (paths == null || paths.isEmpty()) return;
+        if (paths == null || paths.isEmpty()) {
+            return;
+        }
 
         List<String> sorted = new ArrayList<>(paths.keySet());
         sorted.sort(null);
@@ -102,7 +115,9 @@ public class SortSpecPostProcessor implements PostProcessor {
      */
     private void sortResponses(OpenAPI openAPI) {
         Paths paths = openAPI.getPaths();
-        if (paths == null) return;
+        if (paths == null) {
+            return;
+        }
 
         paths.values().stream()
                 .flatMap(pathItem -> pathItem.readOperations().stream())
@@ -116,5 +131,21 @@ public class SortSpecPostProcessor implements PostProcessor {
                     sorted.forEach(code -> ordered.addApiResponse(code, responses.get(code)));
                     op.setResponses(ordered);
                 });
+    }
+
+    /**
+     * Replaces the {@code components/schemas} map with a {@link TreeMap} keyed
+     * alphabetically by schema name. Schema bodies are preserved unchanged.
+     */
+    private void sortSchemas(OpenAPI openAPI) {
+        Components components = openAPI.getComponents();
+        if (components == null) {
+            return;
+        }
+        Map<String, Schema> schemas = components.getSchemas();
+        if (schemas == null || schemas.isEmpty()) {
+            return;
+        }
+        components.setSchemas(new TreeMap<>(schemas));
     }
 }

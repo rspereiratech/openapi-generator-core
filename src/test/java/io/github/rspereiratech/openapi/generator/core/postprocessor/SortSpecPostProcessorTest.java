@@ -10,15 +10,19 @@
  */
 package io.github.rspereiratech.openapi.generator.core.postprocessor;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,8 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * Unit tests for {@link SortSpecPostProcessor}.
  *
- * <p>Verifies that paths and response-code keys are sorted alphabetically when
- * the processor is enabled, and that the model is left unchanged when disabled.
+ * <p>Verifies that paths, response-code keys, and component schemas are sorted
+ * alphabetically when the processor is enabled, and that the model is left
+ * unchanged when disabled.
  */
 class SortSpecPostProcessorTest {
 
@@ -118,6 +123,44 @@ class SortSpecPostProcessorTest {
     }
 
     // ==========================================================================
+    // Schema sorting — enabled
+    // ==========================================================================
+
+    @Test
+    void process_unsortedSchemas_sortedAlphabetically() {
+        OpenAPI openAPI = openApiWithSchemas("UserDto", "AgentDto", "OrderDto");
+
+        enabled.process(openAPI);
+
+        assertEquals(List.of("AgentDto", "OrderDto", "UserDto"),
+                List.copyOf(openAPI.getComponents().getSchemas().keySet()));
+    }
+
+    @Test
+    void process_alreadySortedSchemas_remainsSorted() {
+        OpenAPI openAPI = openApiWithSchemas("AgentDto", "OrderDto", "UserDto");
+
+        enabled.process(openAPI);
+
+        assertEquals(List.of("AgentDto", "OrderDto", "UserDto"),
+                List.copyOf(openAPI.getComponents().getSchemas().keySet()));
+    }
+
+    @Test
+    void process_nullComponents_doesNotThrow() {
+        OpenAPI openAPI = openApiWith("/test");  // components left null
+        enabled.process(openAPI);
+        assertNull(openAPI.getComponents());
+    }
+
+    @Test
+    void process_componentsWithoutSchemas_doesNotThrow() {
+        OpenAPI openAPI = new OpenAPI().components(new Components());
+        enabled.process(openAPI);
+        assertNull(openAPI.getComponents().getSchemas());
+    }
+
+    // ==========================================================================
     // Sorting disabled
     // ==========================================================================
 
@@ -140,6 +183,16 @@ class SortSpecPostProcessorTest {
 
         assertEquals(List.of("500", "200", "404"),
                 List.copyOf(op.getResponses().keySet()));
+    }
+
+    @Test
+    void process_sortOutputFalse_schemaOrderUnchanged() {
+        OpenAPI openAPI = openApiWithSchemas("UserDto", "AgentDto", "OrderDto");
+
+        disabled.process(openAPI);
+
+        assertEquals(List.of("UserDto", "AgentDto", "OrderDto"),
+                List.copyOf(openAPI.getComponents().getSchemas().keySet()));
     }
 
     // ==========================================================================
@@ -194,5 +247,13 @@ class SortSpecPostProcessorTest {
             responses.addApiResponse(code, new ApiResponse().description(code));
         }
         return new Operation().responses(responses);
+    }
+
+    private static OpenAPI openApiWithSchemas(String... names) {
+        Map<String, Schema> schemas = new LinkedHashMap<>();
+        for (String name : names) {
+            schemas.put(name, new Schema<>().name(name));
+        }
+        return new OpenAPI().components(new Components().schemas(schemas));
     }
 }
