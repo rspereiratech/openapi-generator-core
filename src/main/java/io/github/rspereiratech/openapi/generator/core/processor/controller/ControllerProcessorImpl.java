@@ -203,10 +203,11 @@ public class ControllerProcessorImpl implements ControllerProcessor {
     /**
      * Resolves the OpenAPI tags for a controller class.
      *
-     * <p>Uses the {@code @Tag} annotations declared at the most-specific level of the type
-     * hierarchy that declares any (controller class → superclasses → interfaces, mirroring
-     * Swagger Core semantics). A child interface's or subclass's {@code @Tag} fully overrides
-     * an ancestor's — the two are <b>not</b> merged.
+     * <p>Uses the {@code @Tag} annotations declared at the closest level of the type
+     * hierarchy that declares any (BFS by specificity: controller class first, then direct
+     * superclass + direct interfaces, then their parents, …). A child interface's or
+     * subclass's {@code @Tag} fully overrides an ancestor's even in the "diamond" case
+     * where the ancestor is also reachable through an abstract superclass's interfaces.
      *
      * <p>If no {@code @Tag} annotations are found anywhere in the hierarchy, falls back to a
      * tag derived from the controller's simple class name via {@link #deriveTagName}.

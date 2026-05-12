@@ -289,19 +289,20 @@ class AnnotationUtilsTest {
     // ==========================================================================
 
     @Test
-    void collectAllBySimpleName_multipleHierarchyLevels_returnsFirstDeclaringLevelOnly() {
-        // ConcreteController itself declares no @RequestMapping. The walk visits the
-        // superclass chain before interfaces, so AbstractBase ("/abstract") is the
-        // first level with a match and BaseApi ("/base") is shadowed.
+    void collectAllBySimpleName_multipleHierarchyLevels_returnsClosestLevelOnly() {
+        // ConcreteController itself declares no @RequestMapping. Its direct superclass
+        // AbstractBase ("/abstract") and direct interface BaseApi ("/base") are both at
+        // BFS distance 1, so both contribute. Deeper ancestors would be shadowed.
         List<Annotation> found = AnnotationUtils.collectAllBySimpleName(ConcreteController.class, "RequestMapping");
-        List<RequestMapping> mappings = found.stream()
+        List<String> values = found.stream()
                 .filter(RequestMapping.class::isInstance)
                 .map(a -> (RequestMapping) a)
+                .map(rm -> rm.value()[0])
                 .toList();
-        Assertions.assertEquals(1, mappings.size(),
-                "Only the most-specific declaring level should contribute @RequestMapping");
-        Assertions.assertEquals("/abstract", mappings.get(0).value()[0],
-                "@RequestMapping from AbstractBase must shadow the one on BaseApi");
+        Assertions.assertEquals(2, values.size(),
+                "Both same-distance @RequestMapping declarations should contribute");
+        Assertions.assertTrue(values.containsAll(List.of("/abstract", "/base")),
+                "Both AbstractBase and BaseApi mappings should be present");
     }
 
     @Test

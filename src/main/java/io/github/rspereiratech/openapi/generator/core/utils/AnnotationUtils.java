@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -173,29 +174,52 @@ public final class AnnotationUtils {
     }
 
     /**
-     * Collects annotations matching {@code simpleName} from the <em>first</em> level
-     * of the type hierarchy that declares any, walking {@code clazz} → superclass
-     * chain → interfaces (matching the order of {@link TypeUtils#getAncestorTypes}).
+     * Collects annotations matching {@code simpleName} from the closest level of the
+     * type hierarchy that declares any, using <em>BFS by specificity</em>: starting
+     * from {@code clazz}, expanding outward one hop at a time (direct superclass
+     * + direct interfaces) until any level contributes a match.
      *
-     * <p>Once a level contributes at least one match, the walk stops — ancestors
-     * further out are not consulted. This mirrors Swagger Core's
-     * {@code ReflectionUtils.getRepeatableAnnotationsArray}: a child's declaration
-     * fully overrides an ancestor's, rather than being merged with it.
+     * <p>All matches at that first non-empty level are returned together; deeper
+     * ancestors are not consulted. A {@code @Tag} on a child interface therefore
+     * fully overrides one on its parent interface, even when the parent is also
+     * reachable via an abstract superclass's interface chain (the "diamond" case).
      *
      * <p>If no level declares a matching annotation, an empty list is returned.
      *
      * @param clazz      the class to inspect
      * @param simpleName the simple name to match (e.g. {@code "Tag"})
-     * @return matches from the most-specific declaring level, or empty list if none
+     * @return matches from the closest declaring level, or empty list if none
      */
     public static List<Annotation> collectAllBySimpleName(Class<?> clazz, String simpleName) {
-        return Stream.concat(Stream.of(clazz), TypeUtils.getAncestorTypes(clazz).stream())
-                .map(c -> Arrays.stream(c.getAnnotations())
-                        .filter(ann -> isMetaAnnotated(ann.annotationType(), simpleName))
-                        .toList())
-                .filter(list -> !list.isEmpty())
-                .findFirst()
-                .orElse(List.of());
+        Set<Class<?>> visited = new LinkedHashSet<>();
+        List<Class<?>> currentLevel = new ArrayList<>();
+        currentLevel.add(clazz);
+        visited.add(clazz);
+
+        while (!currentLevel.isEmpty()) {
+            List<Annotation> matchesAtLevel = currentLevel.stream()
+                    .flatMap(c -> Arrays.stream(c.getAnnotations()))
+                    .filter(ann -> isMetaAnnotated(ann.annotationType(), simpleName))
+                    .toList();
+            if (!matchesAtLevel.isEmpty()) {
+                return matchesAtLevel;
+            }
+
+            List<Class<?>> nextLevel = new ArrayList<>();
+            for (Class<?> c : currentLevel) {
+                Class<?> sc = c.getSuperclass();
+                if (sc != null && sc != Object.class && visited.add(sc)) {
+                    nextLevel.add(sc);
+                }
+                for (Class<?> iface : c.getInterfaces()) {
+                    if (visited.add(iface)) {
+                        nextLevel.add(iface);
+                    }
+                }
+            }
+            currentLevel = nextLevel;
+        }
+        return List.of();
     }
 
     /**
