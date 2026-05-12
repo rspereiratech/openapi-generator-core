@@ -32,6 +32,8 @@ public class DecimalMaxConstraintHandler extends AbstractConstraintHandler<Decim
     @Override
     protected void applyTyped(DecimalMax ann, Type fieldType, Schema<?> property) {
         property.setMaximum(new BigDecimal(ann.value()));
-        if (!ann.inclusive()) property.setExclusiveMaximum(true);
+        if (!ann.inclusive()) {
+            property.setExclusiveMaximum(true);
+        }
     }
 }

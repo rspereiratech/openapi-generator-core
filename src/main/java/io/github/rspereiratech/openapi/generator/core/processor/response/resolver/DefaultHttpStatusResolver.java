@@ -80,7 +80,9 @@ public class DefaultHttpStatusResolver implements HttpStatusResolver {
      */
     @Override
     public String describeCode(String statusCode) {
-        if ("default".equals(statusCode)) return "default response";
+        if ("default".equals(statusCode)) {
+            return "default response";
+        }
         try {
             HttpStatus status = HttpStatus.resolve(Integer.parseInt(statusCode));
             return status != null ? status.getReasonPhrase() : "Response";

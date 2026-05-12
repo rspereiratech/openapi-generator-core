@@ -32,6 +32,8 @@ public class DecimalMinConstraintHandler extends AbstractConstraintHandler<Decim
     @Override
     protected void applyTyped(DecimalMin ann, Type fieldType, Schema<?> property) {
         property.setMinimum(new BigDecimal(ann.value()));
-        if (!ann.inclusive()) property.setExclusiveMinimum(true);
+        if (!ann.inclusive()) {
+            property.setExclusiveMinimum(true);
+        }
     }
 }

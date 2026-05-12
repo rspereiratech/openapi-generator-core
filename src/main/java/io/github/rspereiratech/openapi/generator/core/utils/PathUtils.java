@@ -33,7 +33,9 @@ public final class PathUtils {
      * @return the normalised segment, or {@code ""} if {@code segment} is null or blank
      */
     public static String normalisePath(String segment) {
-        if (segment == null || segment.isBlank()) return "";
+        if (segment == null || segment.isBlank()) {
+            return "";
+        }
         String s = segment.trim();
         s = s.startsWith("/") ? s : "/" + s;
         s = s.length() > 1 && s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
@@ -56,8 +58,12 @@ public final class PathUtils {
     public static String joinPaths(String base, String sub) {
         String b = normalisePath(base);
         String s = normalisePath(sub);
-        if (b.isEmpty()) return s.isEmpty() ? "/" : s;
-        if (s.isEmpty()) return b;
+        if (b.isEmpty()) {
+            return s.isEmpty() ? "/" : s;
+        }
+        if (s.isEmpty()) {
+            return b;
+        }
         return b.endsWith("/") ? b + s.substring(1) : b + s;
     }
 }

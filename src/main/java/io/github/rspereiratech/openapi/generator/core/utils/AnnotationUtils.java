@@ -282,7 +282,9 @@ public final class AnnotationUtils {
     private static boolean isMetaAnnotated(Class<? extends Annotation> type,
                                             String simpleName,
                                             Set<Class<? extends Annotation>> visited) {
-        if (!visited.add(type)) return false;
+        if (!visited.add(type)) {
+            return false;
+        }
         if (simpleName.equals(type.getSimpleName())) return true;
         return Arrays.stream(type.getAnnotations())
                 .anyMatch(meta -> isMetaAnnotated(meta.annotationType(), simpleName, visited));

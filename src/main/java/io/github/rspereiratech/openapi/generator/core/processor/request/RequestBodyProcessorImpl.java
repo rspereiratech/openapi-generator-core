@@ -126,7 +126,9 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
                 .findFirst()
                 .map(this::hintsFromAnnotation);
 
-        if (fromParam.isPresent()) return fromParam.get();
+        if (fromParam.isPresent()) {
+            return fromParam.get();
+        }
 
         // 2. @Operation.requestBody — fallback
         return AnnotationUtils.findSwaggerAnnotation(method, "Operation")
@@ -162,9 +164,15 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      * @return {@code true} if the annotation has at least one meaningful attribute
      */
     private static boolean isNonDefaultRequestBodyAnnotation(Annotation ann) {
-        if (!AnnotationAttributeUtils.getStringAttribute(ann, "description").isBlank()) return true;
-        if (!AnnotationAttributeUtils.getStringAttribute(ann, "ref").isBlank())         return true;
-        if (!AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "content").isEmpty()) return true;
+        if (!AnnotationAttributeUtils.getStringAttribute(ann, "description").isBlank()) {
+            return true;
+        }
+        if (!AnnotationAttributeUtils.getStringAttribute(ann, "ref").isBlank()) {
+            return true;
+        }
+        if (!AnnotationAttributeUtils.getAnnotationArrayAttribute(ann, "content").isEmpty()) {
+            return true;
+        }
         return AnnotationAttributeUtils.getBooleanAttribute(ann, "required", false);
     }
 
@@ -179,7 +187,9 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
      */
     private Optional<Class<?>> extractImplementationClass(Annotation requestBodyAnn) {
         var contentArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(requestBodyAnn, "content");
-        if (contentArr.isEmpty()) return Optional.empty();
+        if (contentArr.isEmpty()) {
+            return Optional.empty();
+        }
 
         return AnnotationAttributeUtils.getAnnotationAttribute(contentArr.get(0), "schema")
                 .flatMap(schemaAnn -> AnnotationAttributeUtils.getClassAttribute(schemaAnn, "implementation"))
@@ -208,7 +218,9 @@ public class RequestBodyProcessorImpl implements RequestBodyProcessor {
         var body = new RequestBody();
         body.setRequired(required);
         body.setContent(content);
-        if (!description.isBlank()) body.setDescription(description);
+        if (!description.isBlank()) {
+            body.setDescription(description);
+        }
 
         log.trace("RequestBody → mediaType:{} required:{} description:{}", mediaType, required, description);
         return body;

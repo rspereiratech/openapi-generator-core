@@ -63,10 +63,14 @@ public final class TypeUtils {
      * @return the unwrapped type, or the original if no unwrapping applies
      */
     public static Type unwrapType(Type type) {
-        if (!(type instanceof ParameterizedType pt)) return type;
+        if (!(type instanceof ParameterizedType pt)) {
+            return type;
+        }
 
         Type rawType = pt.getRawType();
-        if (!(rawType instanceof Class<?> rawClass)) return type;
+        if (!(rawType instanceof Class<?> rawClass)) {
+            return type;
+        }
 
         if (TRANSPARENT_WRAPPERS.contains(rawClass.getName())) {
             Type[] args = pt.getActualTypeArguments();
@@ -129,7 +133,9 @@ public final class TypeUtils {
     public static Type firstTypeArgument(Type type) {
         if (type instanceof ParameterizedType pt) {
             Type[] args = pt.getActualTypeArguments();
-            if (args.length > 0) return args[0];
+            if (args.length > 0) {
+                return args[0];
+            }
         }
         return Object.class;
     }
@@ -139,8 +145,12 @@ public final class TypeUtils {
      * or {@code null} if it cannot be determined.
      */
     public static Class<?> toRawClass(Type type) {
-        if (type instanceof Class<?> c) return c;
-        if (type instanceof ParameterizedType pt && pt.getRawType() instanceof Class<?> raw) return raw;
+        if (type instanceof Class<?> c) {
+            return c;
+        }
+        if (type instanceof ParameterizedType pt && pt.getRawType() instanceof Class<?> raw) {
+            return raw;
+        }
         return null;
     }
 
@@ -178,7 +188,9 @@ public final class TypeUtils {
      * @return the resolved type, or the original if no substitution was needed
      */
     public static Type resolveType(Type type, Map<TypeVariable<?>, Type> map) {
-        if (map.isEmpty()) return type;
+        if (map.isEmpty()) {
+            return type;
+        }
 
         if (type instanceof TypeVariable<?> tv) {
             return map.getOrDefault(tv, tv);
@@ -190,15 +202,21 @@ public final class TypeUtils {
             boolean changed = false;
             for (int i = 0; i < original.length; i++) {
                 resolved[i] = resolveType(original[i], map);
-                if (resolved[i] != original[i]) changed = true;
+                if (resolved[i] != original[i]) {
+                    changed = true;
+                }
             }
-            if (!changed) return type;
+            if (!changed) {
+                return type;
+            }
             return new ParameterizedTypeImpl(pt.getRawType(), resolved, pt.getOwnerType());
         }
 
         if (type instanceof GenericArrayType gat) {
             Type component = resolveType(gat.getGenericComponentType(), map);
-            if (component == gat.getGenericComponentType()) return type;
+            if (component == gat.getGenericComponentType()) {
+                return type;
+            }
             return (GenericArrayType) () -> component;
         }
 
@@ -215,7 +233,9 @@ public final class TypeUtils {
      * @param map   accumulator mapping each {@link TypeVariable} to its resolved {@link Type}
      */
     private static void walkHierarchy(Class<?> clazz, Map<TypeVariable<?>, Type> map) {
-        if (clazz == null || clazz == Object.class) return;
+        if (clazz == null || clazz == Object.class) {
+            return;
+        }
 
         Stream.concat(
                 Stream.ofNullable(clazz.getGenericSuperclass()),
@@ -236,7 +256,9 @@ public final class TypeUtils {
      *                    existing entries are never overwritten ({@code putIfAbsent} semantics)
      */
     private static void collectTypeVars(Type genericType, Map<TypeVariable<?>, Type> map) {
-        if (!(genericType instanceof ParameterizedType pt)) return;
+        if (!(genericType instanceof ParameterizedType pt)) {
+            return;
+        }
         if (!(pt.getRawType() instanceof Class<?> rawClass)) return;
 
         TypeVariable<?>[] typeParams = rawClass.getTypeParameters();

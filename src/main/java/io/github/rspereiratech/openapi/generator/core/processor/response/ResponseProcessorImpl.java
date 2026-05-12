@@ -181,10 +181,14 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private void addSwaggerApiResponse(Annotation ann, Method method, ApiResponses responses,
                                         Map<TypeVariable<?>, Type> typeVarMap) {
         String responseCode = AnnotationAttributeUtils.getStringAttribute(ann, "responseCode");
-        if (responseCode.isBlank()) responseCode = "default";
+        if (responseCode.isBlank()) {
+            responseCode = "default";
+        }
 
         String description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
-        if (description.isBlank()) description = statusResolver.describeCode(responseCode);
+        if (description.isBlank()) {
+            description = statusResolver.describeCode(responseCode);
+        }
 
         ApiResponse response = new ApiResponse().description(description);
 
@@ -265,16 +269,26 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     private Content buildContentFromAnnotation(Annotation contentAnn, Method method,
                                                 Map<TypeVariable<?>, Type> typeVarMap) {
         String mediaType = AnnotationAttributeUtils.getStringAttribute(contentAnn, "mediaType");
-        if (mediaType.isBlank()) mediaType = defaultProducesMediaType;
+        if (mediaType.isBlank()) {
+            mediaType = defaultProducesMediaType;
+        }
 
         Schema<?> schema = AnnotationAttributeUtils.getAnnotationAttribute(contentAnn, "schema")
                 .map(this::schemaFromAnnotation)
                 .orElse(null);
-        if (schema == null) schema = arraySchemaFromAnnotation(contentAnn);
-        if (schema == null) schema = composedSchemaFromAnnotation(contentAnn);
+        if (schema == null) {
+            schema = arraySchemaFromAnnotation(contentAnn);
+        }
+        if (schema == null) {
+            schema = composedSchemaFromAnnotation(contentAnn);
+        }
         if (schema == null && !hasSchemaHints(contentAnn)) return null; // empty @Content → no body
-        if (schema == null) schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
-        if (schema == null) return null;
+        if (schema == null) {
+            schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
+        }
+        if (schema == null) {
+            return null;
+        }
 
         MediaType mediaTypeObj = new MediaType().schema(schema);
         applyExamples(contentAnn, mediaTypeObj);
@@ -299,7 +313,9 @@ public class ResponseProcessorImpl implements ResponseProcessor {
         List<Annotation> examplesArr = AnnotationAttributeUtils.getAnnotationArrayAttribute(contentAnn, "examples");
         for (Annotation exampleAnn : examplesArr) {
             String name = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "name");
-            if (name.isBlank()) continue;
+            if (name.isBlank()) {
+                continue;
+            }
 
             Example example = new Example();
             String summary       = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "summary");
@@ -307,10 +323,18 @@ public class ResponseProcessorImpl implements ResponseProcessor {
             String value         = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "value");
             String externalValue = AnnotationAttributeUtils.getStringAttribute(exampleAnn, "externalValue");
 
-            if (!summary.isBlank())       example.setSummary(summary);
-            if (!description.isBlank())   example.setDescription(description);
-            if (!value.isBlank())         example.setValue(parseJsonValue(value));
-            if (!externalValue.isBlank()) example.setExternalValue(externalValue);
+            if (!summary.isBlank()) {
+                example.setSummary(summary);
+            }
+            if (!description.isBlank()) {
+                example.setDescription(description);
+            }
+            if (!value.isBlank()) {
+                example.setValue(parseJsonValue(value));
+            }
+            if (!externalValue.isBlank()) {
+                example.setExternalValue(externalValue);
+            }
 
             mediaTypeObj.addExamples(name, example);
         }
@@ -378,10 +402,18 @@ public class ResponseProcessorImpl implements ResponseProcessor {
         }
 
         Schema<?> composed = new Schema<>();
-        if (!oneOf.isEmpty()) composed.setOneOf(oneOf);
-        if (!allOf.isEmpty()) composed.setAllOf(allOf);
-        if (!anyOf.isEmpty()) composed.setAnyOf(anyOf);
-        if (!sc.type().isBlank()) composed.setType(sc.type());
+        if (!oneOf.isEmpty()) {
+            composed.setOneOf(oneOf);
+        }
+        if (!allOf.isEmpty()) {
+            composed.setAllOf(allOf);
+        }
+        if (!anyOf.isEmpty()) {
+            composed.setAnyOf(anyOf);
+        }
+        if (!sc.type().isBlank()) {
+            composed.setType(sc.type());
+        }
         return Optional.of(composed);
     }
 
@@ -533,7 +565,9 @@ public class ResponseProcessorImpl implements ResponseProcessor {
     @SuppressWarnings("java:S1168") // null is intentional: signals "no body" (e.g. void return type)
     private Content buildContentFromReturnType(Method method, Map<TypeVariable<?>, Type> typeVarMap) {
         Schema<?> schema = schemaProcessor.toSchema(method.getGenericReturnType(), typeVarMap);
-        if (schema == null) return null;
+        if (schema == null) {
+            return null;
+        }
 
         Content content = new Content();
         content.addMediaType(resolveProduces(method), new MediaType().schema(schema));

@@ -177,7 +177,9 @@ public class ControllerProcessorImpl implements ControllerProcessor {
             String fullPath = PathUtils.joinPaths(basePath, AnnotationAttributeUtils.extractPath(ann));
             List<String> mappingHeaders = AnnotationAttributeUtils.getStringArrayValue(ann, "headers");
             List<PathItem.HttpMethod> httpMethods = resolveHttpMethods(ann);
-            if (httpMethods.isEmpty()) httpMethods = List.of(PathItem.HttpMethod.GET);
+            if (httpMethods.isEmpty()) {
+                httpMethods = List.of(PathItem.HttpMethod.GET);
+            }
             httpMethods.forEach(httpMethod -> addOperation(openAPI, fullPath, httpMethod,
                     operationProcessor.buildOperation(method, httpMethod.name(), tags, typeVarMap, mappingHeaders),
                     mappingHeaders));
@@ -357,7 +359,9 @@ public class ControllerProcessorImpl implements ControllerProcessor {
      */
     private static boolean hasHeaderMappingParams(PathItem pathItem, PathItem.HttpMethod httpMethod) {
         Operation existing = pathItem.readOperationsMap().get(httpMethod);
-        if (existing == null || existing.getParameters() == null) return false;
+        if (existing == null || existing.getParameters() == null) {
+            return false;
+        }
         return existing.getParameters().stream()
                 .anyMatch(p -> "header".equals(p.getIn()));
     }

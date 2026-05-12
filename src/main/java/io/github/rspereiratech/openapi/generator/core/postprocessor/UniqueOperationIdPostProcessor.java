@@ -56,13 +56,17 @@ public class UniqueOperationIdPostProcessor implements PostProcessor {
     @Override
     public void process(OpenAPI openAPI) {
         Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");
-        if (openAPI.getPaths() == null) return;
+        if (openAPI.getPaths() == null) {
+            return;
+        }
 
         Map<String, Integer> seen = new HashMap<>();
 
         for (PathItem pathItem : openAPI.getPaths().values()) {
             for (Operation op : pathItem.readOperations()) {
-                if (op == null || op.getOperationId() == null) continue;
+                if (op == null || op.getOperationId() == null) {
+                    continue;
+                }
 
                 String base  = op.getOperationId();
                 int    count = seen.getOrDefault(base, 0);

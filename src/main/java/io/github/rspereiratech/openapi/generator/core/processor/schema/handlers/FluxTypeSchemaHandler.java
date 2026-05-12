@@ -38,7 +38,9 @@ public class FluxTypeSchemaHandler implements TypeSchemaHandler {
     @Override
     @SuppressWarnings("java:S1872")
     public boolean supports(Type type) {
-        if (!(type instanceof ParameterizedType pt)) return false;
+        if (!(type instanceof ParameterizedType pt)) {
+            return false;
+        }
         Type raw = pt.getRawType();
         return raw instanceof Class<?> c && "reactor.core.publisher.Flux".equals(c.getName());
     }

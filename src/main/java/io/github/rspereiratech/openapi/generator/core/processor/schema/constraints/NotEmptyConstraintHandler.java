@@ -39,7 +39,11 @@ public class NotEmptyConstraintHandler extends AbstractConstraintHandler<NotEmpt
         boolean multiValued = TypeUtils.isCollection(fieldType)
                 || TypeUtils.isMap(fieldType)
                 || TypeUtils.isArray(fieldType);
-        if (multiValued) property.setMinItems(1);
-        else             property.setMinLength(1);
+        if (multiValued) {
+            property.setMinItems(1);
+        }
+        else {
+            property.setMinLength(1);
+        }
     }
 }

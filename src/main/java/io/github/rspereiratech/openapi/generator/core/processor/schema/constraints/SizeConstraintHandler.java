@@ -48,7 +48,11 @@ public class SizeConstraintHandler extends AbstractConstraintHandler<Size> {
         Consumer<Integer> setMin = multiValued ? property::setMinItems : property::setMinLength;
         Consumer<Integer> setMax = multiValued ? property::setMaxItems : property::setMaxLength;
 
-        if (ann.min() > 0)                setMin.accept(ann.min());
-        if (ann.max() < Integer.MAX_VALUE) setMax.accept(ann.max());
+        if (ann.min() > 0) {
+            setMin.accept(ann.min());
+        }
+        if (ann.max() < Integer.MAX_VALUE) {
+            setMax.accept(ann.max());
+        }
     }
 }

@@ -205,7 +205,9 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                 .filter(ann -> !AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false))
                 .forEach(ann -> {
                     String name = AnnotationAttributeUtils.getStringAttribute(ann, "name");
-                    if (!name.isBlank()) byName.putIfAbsent(name, ann);
+                    if (!name.isBlank()) {
+                        byName.putIfAbsent(name, ann);
+                    }
                 });
 
         return byName.values().stream().map(this::buildVirtualParameter);
@@ -244,10 +246,18 @@ public class ParameterProcessorImpl implements ParameterProcessor {
         parameter.setIn(location);
         parameter.setName(name);
         parameter.setRequired("path".equals(location) || required);
-        if (schema != null)         parameter.setSchema(schema);
-        if (!description.isBlank()) parameter.setDescription(description);
-        if (!example.isBlank())     parameter.setExample(example);
-        if (deprecated)             parameter.setDeprecated(true);
+        if (schema != null) {
+            parameter.setSchema(schema);
+        }
+        if (!description.isBlank()) {
+            parameter.setDescription(description);
+        }
+        if (!example.isBlank()) {
+            parameter.setExample(example);
+        }
+        if (deprecated) {
+            parameter.setDeprecated(true);
+        }
 
         log.trace("  Virtual parameter [{}] → in:{} required:{}", name, location, parameter.getRequired());
         return parameter;
@@ -315,7 +325,9 @@ public class ParameterProcessorImpl implements ParameterProcessor {
             return Optional.empty();
         }
 
-        if (isHiddenSwaggerAnnotation(annotations)) return Optional.empty();
+        if (isHiddenSwaggerAnnotation(annotations)) {
+            return Optional.empty();
+        }
 
         Optional<Schema<?>> schemaOverride = Optional.empty();
         if (ignoredParamTypes.contains(param.getType().getName())) {
@@ -356,9 +368,13 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                         Schema<?> schema = new Schema<>();
                         schema.setType(type);
                         String format = AnnotationAttributeUtils.getStringAttribute(schemaAnn, "format");
-                        if (!format.isBlank()) schema.setFormat(format);
+                        if (!format.isBlank()) {
+                            schema.setFormat(format);
+                        }
                         String example = AnnotationAttributeUtils.getStringAttribute(schemaAnn, "example");
-                        if (!example.isBlank()) schema.setExample(example);
+                        if (!example.isBlank()) {
+                            schema.setExample(example);
+                        }
                         return Optional.of(schema);
                     }
                     return AnnotationAttributeUtils.getClassAttribute(schemaAnn, "implementation")
@@ -454,7 +470,9 @@ public class ParameterProcessorImpl implements ParameterProcessor {
      */
     private Optional<Parameter> buildPageableParameter(java.lang.reflect.Parameter param, int index, Annotation[] annotations) {
 
-        if (isHiddenSwaggerAnnotation(annotations)) return Optional.empty();
+        if (isHiddenSwaggerAnnotation(annotations)) {
+            return Optional.empty();
+        }
 
         schemaProcessor.toSchema(param.getType());
 
@@ -497,8 +515,12 @@ public class ParameterProcessorImpl implements ParameterProcessor {
                     String description = AnnotationAttributeUtils.getStringAttribute(ann, "description");
                     String example     = AnnotationAttributeUtils.getStringAttribute(ann, "example");
 
-                    if (!description.isBlank()) parameter.setDescription(description);
-                    if (!example.isBlank())     parameter.setExample(example);
+                    if (!description.isBlank()) {
+                        parameter.setDescription(description);
+                    }
+                    if (!example.isBlank()) {
+                        parameter.setExample(example);
+                    }
                 });
     }
 

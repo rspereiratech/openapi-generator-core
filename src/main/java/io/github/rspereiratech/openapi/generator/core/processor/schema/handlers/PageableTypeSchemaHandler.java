@@ -39,7 +39,9 @@ public class PageableTypeSchemaHandler implements TypeSchemaHandler {
      */
     @Override
     public boolean supports(Type type) {
-        if (!(type instanceof Class<?> c)) return false;
+        if (!(type instanceof Class<?> c)) {
+            return false;
+        }
         String name = c.getName();
         return "org.springframework.data.domain.Pageable".equals(name)
                 || "org.springframework.data.domain.PageRequest".equals(name);

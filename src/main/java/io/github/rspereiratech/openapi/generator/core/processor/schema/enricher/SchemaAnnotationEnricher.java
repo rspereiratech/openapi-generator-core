@@ -84,11 +84,15 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
     @Override
     public void apply(Type type, Map<String, Schema<?>> schemas) {
         Preconditions.checkNotNull(type, "'type' must not be null");
-        if (schemas == null || schemas.isEmpty()) return;
+        if (schemas == null || schemas.isEmpty()) {
+            return;
+        }
 
         SchemaEnricherSupport.collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
             Object schemaObj = schemas.get(clazz.getSimpleName());
-            if (!(schemaObj instanceof Schema<?> schema)) return;
+            if (!(schemaObj instanceof Schema<?> schema)) {
+                return;
+            }
             applyClassLevelAnnotation(clazz, schema);
             applyFieldLevelAnnotations(clazz, schema);
         });
@@ -108,16 +112,32 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      */
     private static void applyClassLevelAnnotation(Class<?> clazz, Schema<?> schema) {
         var ann = clazz.getAnnotation(io.swagger.v3.oas.annotations.media.Schema.class);
-        if (ann == null) return;
+        if (ann == null) {
+            return;
+        }
 
-        if (!ann.description().isBlank()  && schema.getDescription() == null) schema.setDescription(ann.description());
-        if (!ann.title().isBlank()         && schema.getTitle()       == null) schema.setTitle(ann.title());
-        if (!ann.format().isBlank()        && schema.getFormat()      == null) schema.setFormat(ann.format());
-        if (!ann.example().isBlank()       && schema.getExample()     == null) schema.setExample(ann.example());
-        if (!ann.defaultValue().isBlank()  && schema.getDefault()     == null) schema.setDefault(ann.defaultValue());
+        if (!ann.description().isBlank()  && schema.getDescription() == null) {
+            schema.setDescription(ann.description());
+        }
+        if (!ann.title().isBlank()         && schema.getTitle()       == null) {
+            schema.setTitle(ann.title());
+        }
+        if (!ann.format().isBlank()        && schema.getFormat()      == null) {
+            schema.setFormat(ann.format());
+        }
+        if (!ann.example().isBlank()       && schema.getExample()     == null) {
+            schema.setExample(ann.example());
+        }
+        if (!ann.defaultValue().isBlank()  && schema.getDefault()     == null) {
+            schema.setDefault(ann.defaultValue());
+        }
 
-        if (ann.deprecated()  && schema.getDeprecated() == null) schema.setDeprecated(true);
-        if (ann.nullable()    && schema.getNullable()   == null) schema.setNullable(true);
+        if (ann.deprecated()  && schema.getDeprecated() == null) {
+            schema.setDeprecated(true);
+        }
+        if (ann.nullable()    && schema.getNullable()   == null) {
+            schema.setNullable(true);
+        }
 
         applyAccessMode(ann.readOnly(), ann.writeOnly(), ann.accessMode(), schema);
         applyExternalDocs(ann.externalDocs(), schema);
@@ -142,11 +162,15 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      * @param schema the OpenAPI schema whose properties may be mutated; must not be {@code null}
      */
     private static void applyFieldLevelAnnotations(Class<?> clazz, Schema<?> schema) {
-        if (schema.getProperties() == null) return;
+        if (schema.getProperties() == null) {
+            return;
+        }
 
         SchemaEnricherSupport.allDeclaredFields(clazz).forEach(field -> {
             var ann = field.getAnnotation(io.swagger.v3.oas.annotations.media.Schema.class);
-            if (ann == null) return;
+            if (ann == null) {
+                return;
+            }
 
             String propertyName = SchemaEnricherSupport.resolvePropertyName(field);
 
@@ -170,7 +194,9 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      */
     private static void removeHiddenField(Schema<?> schema, String propertyName) {
         schema.getProperties().remove(propertyName);
-        if (schema.getRequired() != null) schema.getRequired().remove(propertyName);
+        if (schema.getRequired() != null) {
+            schema.getRequired().remove(propertyName);
+        }
     }
 
     /**
@@ -201,11 +227,21 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      * @param prop the property schema to enrich; must not be {@code null}
      */
     private static void applyTextAttributes(io.swagger.v3.oas.annotations.media.Schema ann, Schema<?> prop) {
-        if (!ann.description().isBlank()  && prop.getDescription() == null) prop.setDescription(ann.description());
-        if (!ann.example().isBlank()       && prop.getExample()     == null) prop.setExample(ann.example());
-        if (!ann.format().isBlank()        && prop.getFormat()      == null) prop.setFormat(ann.format());
-        if (!ann.pattern().isBlank()       && prop.getPattern()     == null) prop.setPattern(ann.pattern());
-        if (!ann.defaultValue().isBlank()  && prop.getDefault()     == null) prop.setDefault(ann.defaultValue());
+        if (!ann.description().isBlank()  && prop.getDescription() == null) {
+            prop.setDescription(ann.description());
+        }
+        if (!ann.example().isBlank()       && prop.getExample()     == null) {
+            prop.setExample(ann.example());
+        }
+        if (!ann.format().isBlank()        && prop.getFormat()      == null) {
+            prop.setFormat(ann.format());
+        }
+        if (!ann.pattern().isBlank()       && prop.getPattern()     == null) {
+            prop.setPattern(ann.pattern());
+        }
+        if (!ann.defaultValue().isBlank()  && prop.getDefault()     == null) {
+            prop.setDefault(ann.defaultValue());
+        }
     }
 
     /**
@@ -218,10 +254,18 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      * @param prop the property schema to enrich; must not be {@code null}
      */
     private static void applyFlagAttributes(io.swagger.v3.oas.annotations.media.Schema ann, Schema<?> prop) {
-        if (ann.deprecated()        && prop.getDeprecated()         == null) prop.setDeprecated(true);
-        if (ann.nullable()          && prop.getNullable()           == null) prop.setNullable(true);
-        if (ann.exclusiveMinimum()  && prop.getExclusiveMinimum()   == null) prop.setExclusiveMinimum(true);
-        if (ann.exclusiveMaximum()  && prop.getExclusiveMaximum()   == null) prop.setExclusiveMaximum(true);
+        if (ann.deprecated()        && prop.getDeprecated()         == null) {
+            prop.setDeprecated(true);
+        }
+        if (ann.nullable()          && prop.getNullable()           == null) {
+            prop.setNullable(true);
+        }
+        if (ann.exclusiveMinimum()  && prop.getExclusiveMinimum()   == null) {
+            prop.setExclusiveMinimum(true);
+        }
+        if (ann.exclusiveMaximum()  && prop.getExclusiveMaximum()   == null) {
+            prop.setExclusiveMaximum(true);
+        }
         applyAccessMode(ann.readOnly(), ann.writeOnly(), ann.accessMode(), prop);
     }
 
@@ -239,13 +283,27 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      * @param prop the property schema to enrich; must not be {@code null}
      */
     private static void applyNumericConstraints(io.swagger.v3.oas.annotations.media.Schema ann, Schema<?> prop) {
-        if (!ann.minimum().isBlank() && prop.getMinimum() == null) AnnotationAttributeUtils.tryParse(ann.minimum(), BigDecimal::new).ifPresent(prop::setMinimum);
-        if (!ann.maximum().isBlank() && prop.getMaximum() == null) AnnotationAttributeUtils.tryParse(ann.maximum(), BigDecimal::new).ifPresent(prop::setMaximum);
-        if (ann.minLength() > 0              && prop.getMinLength()     == null) prop.setMinLength(ann.minLength());
-        if (ann.maxLength() < Integer.MAX_VALUE && prop.getMaxLength()  == null) prop.setMaxLength(ann.maxLength());
-        if (ann.minProperties() > 0          && prop.getMinProperties() == null) prop.setMinProperties(ann.minProperties());
-        if (ann.maxProperties() > 0          && prop.getMaxProperties() == null) prop.setMaxProperties(ann.maxProperties());
-        if (ann.multipleOf() != 0            && prop.getMultipleOf()    == null) prop.setMultipleOf(BigDecimal.valueOf(ann.multipleOf()));
+        if (!ann.minimum().isBlank() && prop.getMinimum() == null) {
+            AnnotationAttributeUtils.tryParse(ann.minimum(), BigDecimal::new).ifPresent(prop::setMinimum);
+        }
+        if (!ann.maximum().isBlank() && prop.getMaximum() == null) {
+            AnnotationAttributeUtils.tryParse(ann.maximum(), BigDecimal::new).ifPresent(prop::setMaximum);
+        }
+        if (ann.minLength() > 0              && prop.getMinLength()     == null) {
+            prop.setMinLength(ann.minLength());
+        }
+        if (ann.maxLength() < Integer.MAX_VALUE && prop.getMaxLength()  == null) {
+            prop.setMaxLength(ann.maxLength());
+        }
+        if (ann.minProperties() > 0          && prop.getMinProperties() == null) {
+            prop.setMinProperties(ann.minProperties());
+        }
+        if (ann.maxProperties() > 0          && prop.getMaxProperties() == null) {
+            prop.setMaxProperties(ann.maxProperties());
+        }
+        if (ann.multipleOf() != 0            && prop.getMultipleOf()    == null) {
+            prop.setMultipleOf(BigDecimal.valueOf(ann.multipleOf()));
+        }
     }
 
     // ------------------------------------------------------------------
@@ -268,8 +326,12 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
                                         Schema<?> schema) {
         boolean effectiveRead  = readOnly  || accessMode == io.swagger.v3.oas.annotations.media.Schema.AccessMode.READ_ONLY;
         boolean effectiveWrite = writeOnly || accessMode == io.swagger.v3.oas.annotations.media.Schema.AccessMode.WRITE_ONLY;
-        if (effectiveRead  && schema.getReadOnly()  == null) schema.setReadOnly(true);
-        if (effectiveWrite && schema.getWriteOnly() == null) schema.setWriteOnly(true);
+        if (effectiveRead  && schema.getReadOnly()  == null) {
+            schema.setReadOnly(true);
+        }
+        if (effectiveWrite && schema.getWriteOnly() == null) {
+            schema.setWriteOnly(true);
+        }
     }
 
     /**
@@ -283,12 +345,20 @@ public class SchemaAnnotationEnricher implements SchemaEnricher {
      */
     private static void applyExternalDocs(
             io.swagger.v3.oas.annotations.ExternalDocumentation extDoc, Schema<?> schema) {
-        if (schema.getExternalDocs() != null) return;
-        if (extDoc.url().isBlank() && extDoc.description().isBlank()) return;
+        if (schema.getExternalDocs() != null) {
+            return;
+        }
+        if (extDoc.url().isBlank() && extDoc.description().isBlank()) {
+            return;
+        }
 
         var model = new ExternalDocumentation();
-        if (!extDoc.url().isBlank())         model.setUrl(extDoc.url());
-        if (!extDoc.description().isBlank()) model.setDescription(extDoc.description());
+        if (!extDoc.url().isBlank()) {
+            model.setUrl(extDoc.url());
+        }
+        if (!extDoc.description().isBlank()) {
+            model.setDescription(extDoc.description());
+        }
         schema.setExternalDocs(model);
     }
 

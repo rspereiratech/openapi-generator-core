@@ -55,7 +55,9 @@ public class SchemaRegistryMergePostProcessor implements PostProcessor {
     public void process(OpenAPI openAPI) {
         Preconditions.checkNotNull(openAPI, "'openAPI' must not be null");
         Map<String, Schema<?>> schemas = schemaProcessor.getSchemaRegistry();
-        if (schemas.isEmpty()) return;
+        if (schemas.isEmpty()) {
+            return;
+        }
 
         if (openAPI.getComponents() == null) {
             openAPI.setComponents(new Components());

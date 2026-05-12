@@ -236,7 +236,9 @@ public class DefaultClasspathScanner implements ClasspathScanner {
                                    ClassLoader classLoader,
                                    Set<String> controllerAnnotations,
                                    List<Class<?>> result) {
-        if (!matchesAnyPackage(className, basePackages)) return;
+        if (!matchesAnyPackage(className, basePackages)) {
+            return;
+        }
 
         try {
             Class<?> clazz = classLoader.loadClass(className);
@@ -280,7 +282,9 @@ public class DefaultClasspathScanner implements ClasspathScanner {
      * @return {@code true} if {@code clazz} is annotated with a controller stereotype
      */
     private boolean isController(Class<?> clazz, Set<String> controllerAnnotations) {
-        if (clazz.isInterface() || clazz.isAnnotation() || clazz.isEnum()) return false;
+        if (clazz.isInterface() || clazz.isAnnotation() || clazz.isEnum()) {
+            return false;
+        }
         return Arrays.stream(clazz.getAnnotations())
                 .anyMatch(ann -> hasControllerStereotype(ann.annotationType(), new HashSet<>(), controllerAnnotations));
     }
@@ -298,7 +302,9 @@ public class DefaultClasspathScanner implements ClasspathScanner {
      * @return {@code true} if {@code type} is or inherits a controller stereotype
      */
     private boolean hasControllerStereotype(Class<? extends Annotation> type, Set<Class<? extends Annotation>> visited, Set<String> controllerAnnotations) {
-        if (!visited.add(type)) return false;
+        if (!visited.add(type)) {
+            return false;
+        }
         if (controllerAnnotations.contains(type.getName())) return true;
         return Arrays.stream(type.getAnnotations())
                 .anyMatch(meta -> hasControllerStereotype(meta.annotationType(), visited, controllerAnnotations));

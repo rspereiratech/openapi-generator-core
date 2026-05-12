@@ -63,12 +63,16 @@ class ResponseProcessorTest {
     void setUp() {
         lenient().when(schemaProcessor.toSchema(any())).thenAnswer(inv -> {
             Type type = inv.getArgument(0);
-            if (type == void.class || type == Void.class) return null;
+            if (type == void.class || type == Void.class) {
+                return null;
+            }
             return new Schema<>();
         });
         lenient().when(schemaProcessor.toSchema(any(), any())).thenAnswer(inv -> {
             Type type = inv.getArgument(0);
-            if (type == void.class || type == Void.class) return null;
+            if (type == void.class || type == Void.class) {
+                return null;
+            }
             return new Schema<>();
         });
         processor = new ResponseProcessorImpl(schemaProcessor, "*/*");

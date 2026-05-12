@@ -53,7 +53,9 @@ public class PageTypeSchemaHandler implements TypeSchemaHandler {
     @Override
     @SuppressWarnings("java:S1872")
     public boolean supports(Type type) {
-        if (!(type instanceof ParameterizedType pt)) return false;
+        if (!(type instanceof ParameterizedType pt)) {
+            return false;
+        }
         Type raw = pt.getRawType();
         return raw instanceof Class<?> c && "org.springframework.data.domain.Page".equals(c.getName());
     }
@@ -118,7 +120,9 @@ public class PageTypeSchemaHandler implements TypeSchemaHandler {
      * @param registry the schema registry to populate
      */
     private void ensureSortObjectSchema(Map<String, Schema<?>> registry) {
-        if (registry.containsKey(SORT_OBJECT)) return;
+        if (registry.containsKey(SORT_OBJECT)) {
+            return;
+        }
         Schema<?> sort = new Schema<>()
                 .type(TYPE_OBJECT)
                 .addProperty("direction",    new Schema<>().type(TYPE_STRING))
@@ -141,7 +145,9 @@ public class PageTypeSchemaHandler implements TypeSchemaHandler {
      * @param registry the schema registry to populate
      */
     private void ensurePageableObjectSchema(Map<String, Schema<?>> registry) {
-        if (registry.containsKey(PAGEABLE_OBJECT)) return;
+        if (registry.containsKey(PAGEABLE_OBJECT)) {
+            return;
+        }
         ensureSortObjectSchema(registry);
         Schema<?> pageable = new Schema<>()
                 .type(TYPE_OBJECT)

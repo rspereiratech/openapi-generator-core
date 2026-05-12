@@ -138,12 +138,18 @@ public class ValidationSchemaEnricher implements SchemaEnricher {
     @Override
     public void apply(Type type, Map<String, Schema<?>> schemas) {
         Preconditions.checkNotNull(type, "'type' must not be null");
-        if (schemas == null || schemas.isEmpty()) return;
+        if (schemas == null || schemas.isEmpty()) {
+            return;
+        }
 
         SchemaEnricherSupport.collectReachableClasses(type, new HashSet<>()).forEach(clazz -> {
             Object schemaObj = schemas.get(clazz.getSimpleName());
-            if (!(schemaObj instanceof Schema<?> schema)) return;
-            if (schema.getProperties() == null) return;
+            if (!(schemaObj instanceof Schema<?> schema)) {
+                return;
+            }
+            if (schema.getProperties() == null) {
+                return;
+            }
             applyConstraintsFromClass(clazz, schema);
         });
     }

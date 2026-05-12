@@ -102,7 +102,9 @@ public class OperationProcessorImpl implements OperationProcessor {
 
         operation.setResponses(responseProcessor.processResponses(method, httpMethod, typeVarMap));
 
-        if (isDeprecated(method)) operation.setDeprecated(true);
+        if (isDeprecated(method)) {
+            operation.setDeprecated(true);
+        }
 
         return operation;
     }
@@ -144,11 +146,21 @@ public class OperationProcessorImpl implements OperationProcessor {
         boolean hidden     = AnnotationAttributeUtils.getBooleanAttribute(ann, "hidden", false);
         boolean deprecated = AnnotationAttributeUtils.getBooleanAttribute(ann, "deprecated", false);
 
-        if (!summary.isBlank())     operation.setSummary(summary);
-        if (!description.isBlank()) operation.setDescription(description);
-        if (!operationId.isBlank()) operation.setOperationId(operationId);
-        if (hidden)                 operation.addExtension("x-hidden", true);
-        if (deprecated)             operation.setDeprecated(true);
+        if (!summary.isBlank()) {
+            operation.setSummary(summary);
+        }
+        if (!description.isBlank()) {
+            operation.setDescription(description);
+        }
+        if (!operationId.isBlank()) {
+            operation.setOperationId(operationId);
+        }
+        if (hidden) {
+            operation.addExtension("x-hidden", true);
+        }
+        if (deprecated) {
+            operation.setDeprecated(true);
+        }
 
         AnnotationAttributeUtils.getStringArrayValue(ann, "tags").stream()
                 .filter(t -> !t.isBlank())
@@ -178,11 +190,17 @@ public class OperationProcessorImpl implements OperationProcessor {
     private static void applyExternalDocs(Annotation extDocAnn, Operation operation) {
         String url         = AnnotationAttributeUtils.getStringAttribute(extDocAnn, "url");
         String description = AnnotationAttributeUtils.getStringAttribute(extDocAnn, "description");
-        if (url.isBlank() && description.isBlank()) return;
+        if (url.isBlank() && description.isBlank()) {
+            return;
+        }
 
         ExternalDocumentation model = new ExternalDocumentation();
-        if (!url.isBlank())         model.setUrl(url);
-        if (!description.isBlank()) model.setDescription(description);
+        if (!url.isBlank()) {
+            model.setUrl(url);
+        }
+        if (!description.isBlank()) {
+            model.setDescription(description);
+        }
         operation.setExternalDocs(model);
     }
 
@@ -197,11 +215,15 @@ public class OperationProcessorImpl implements OperationProcessor {
     private static void applyServer(Annotation serverAnn, Operation operation) {
         String url         = AnnotationAttributeUtils.getStringAttribute(serverAnn, "url");
         String description = AnnotationAttributeUtils.getStringAttribute(serverAnn, "description");
-        if (url.isBlank()) return;
+        if (url.isBlank()) {
+            return;
+        }
 
         Server server = new Server();
         server.setUrl(url);
-        if (!description.isBlank()) server.setDescription(description);
+        if (!description.isBlank()) {
+            server.setDescription(description);
+        }
         operation.addServersItem(server);
     }
 
@@ -215,7 +237,9 @@ public class OperationProcessorImpl implements OperationProcessor {
      */
     private static void applySecurityRequirement(Annotation secAnn, Operation operation) {
         String name = AnnotationAttributeUtils.getStringAttribute(secAnn, "name");
-        if (name.isBlank()) return;
+        if (name.isBlank()) {
+            return;
+        }
 
         List<String> scopes = AnnotationAttributeUtils.getStringArrayValue(secAnn, "scopes");
         SecurityRequirement requirement = new SecurityRequirement();
@@ -240,10 +264,14 @@ public class OperationProcessorImpl implements OperationProcessor {
                 .forEach(propAnn -> {
                     String propName  = AnnotationAttributeUtils.getStringAttribute(propAnn, "name");
                     String propValue = AnnotationAttributeUtils.getStringAttribute(propAnn, "value");
-                    if (propName.isBlank()) return;
+                    if (propName.isBlank()) {
+                        return;
+                    }
 
                     String key = extensionName.isBlank() ? propName : extensionName + "." + propName;
-                    if (!key.startsWith("x-")) key = "x-" + key;
+                    if (!key.startsWith("x-")) {
+                        key = "x-" + key;
+                    }
                     operation.addExtension(key, propValue);
                 });
     }
@@ -279,15 +307,21 @@ public class OperationProcessorImpl implements OperationProcessor {
 
         parameters.forEach(param -> {
             Annotation ann = byName.get(param.getName());
-            if (ann == null) return;
+            if (ann == null) {
+                return;
+            }
 
             if (param.getDescription() == null) {
                 String desc = AnnotationAttributeUtils.getStringAttribute(ann, "description");
-                if (!desc.isBlank()) param.setDescription(desc);
+                if (!desc.isBlank()) {
+                    param.setDescription(desc);
+                }
             }
             if (param.getExample() == null) {
                 String example = AnnotationAttributeUtils.getStringAttribute(ann, "example");
-                if (!example.isBlank()) param.setExample(example);
+                if (!example.isBlank()) {
+                    param.setExample(example);
+                }
             }
         });
     }
@@ -301,7 +335,9 @@ public class OperationProcessorImpl implements OperationProcessor {
      * Example: {@code "getUserById"} → {@code "Get user by id"}.
      */
     static String methodNameToSentence(String name) {
-        if (name == null || name.isBlank()) return name;
+        if (name == null || name.isBlank()) {
+            return name;
+        }
         String spaced = name.replaceAll("([A-Z])", " $1").toLowerCase();
         return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1).trim();
     }
