@@ -1,0 +1,24 @@
+# Code owners for this repository.
+#
+# These owners are automatically requested for review when a pull request
+# touches files matching the pattern. The last matching entry wins.
+#
+# Reference: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in this repository.
+*                       @rspereiratech
+
+# Source code
+/src/                   @rspereiratech
+/pom.xml                @rspereiratech
+
+# Documentation
+/docs/                  @rspereiratech
+/README.md              @rspereiratech
+
+# Repository governance and tooling
+/.github/               @rspereiratech
+/CODE_OF_CONDUCT.md     @rspereiratech
+/CONTRIBUTING.md        @rspereiratech
+/SECURITY.md            @rspereiratech
+/LICENSE                @rspereiratech

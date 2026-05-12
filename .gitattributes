@@ -1,0 +1,46 @@
+# Default behaviour: treat files as text and normalize line endings to LF
+# in the repository. Working copies use the platform's native EOL.
+* text=auto eol=lf
+
+# Source code and configuration — explicit text
+*.java          text
+*.kt            text
+*.xml           text
+*.pom           text
+*.properties    text
+*.yml           text
+*.yaml          text
+*.json          text
+*.md            text
+*.txt           text
+*.html          text
+*.css           text
+*.js            text
+
+# Shell scripts must always be LF
+*.sh            text eol=lf
+*.bash          text eol=lf
+mvnw            text eol=lf
+
+# Windows batch files must be CRLF
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+mvnw.cmd        text eol=crlf
+
+# Binary files — never normalize
+*.jar           binary
+*.war           binary
+*.ear           binary
+*.zip           binary
+*.tar           binary
+*.gz            binary
+*.tgz           binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.pdf           binary
+*.class         binary
+*.keystore      binary
+*.jks           binary

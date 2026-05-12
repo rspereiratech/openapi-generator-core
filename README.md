@@ -1,11 +1,13 @@
 # openapi-generator-core
 
-[![CI](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml/badge.svg)](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/rspereiratech/openapi-generator-core/ci.yml?branch=master&label=Build)](https://github.com/rspereiratech/openapi-generator-core/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/rspereiratech/openapi-generator-core/codeql.yml?branch=master&label=CodeQL)](https://github.com/rspereiratech/openapi-generator-core/security/code-scanning)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Java 17](https://img.shields.io/badge/Java-17+-blue?logo=openjdk)](https://openjdk.org/projects/jdk/17/)
 [![Spring](https://img.shields.io/badge/Spring-6DB33F?logo=spring&logoColor=white)](https://spring.io)
 [![OpenAPI 3.0](https://img.shields.io/badge/OpenAPI-3.0-green?logo=openapiinitiative)](https://swagger.io/specification/)
 ![REST API](https://img.shields.io/badge/REST-API-blue)
+[![Donate](https://img.shields.io/badge/Donate-Crypto-2ECC71?logo=bitcoin&logoColor=white)](https://nowpayments.io/donation/rspereiratech)
 
 Core library that generates an OpenAPI 3.0 specification from compiled Spring MVC controllers — **no running server required**.
 
@@ -242,6 +244,16 @@ After all controllers are processed, four post-processors run in sequence:
 | `UniqueOperationIdPostProcessor` | Disambiguates duplicate operation IDs using a numeric suffix strategy |
 
 See [`docs/Post-Processors.md`](docs/Post-Processors.md) for details.
+
+---
+
+## Support
+
+If you find this project useful, consider supporting its development:
+
+[![Donate](https://img.shields.io/badge/Donate-Crypto-2ECC71?logo=bitcoin&logoColor=white)](https://nowpayments.io/donation/rspereiratech)
+
+Crypto donations via [NOWPayments](https://nowpayments.io/donation/rspereiratech) — supports BTC, ETH, USDT and many others.
 
 ---
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/rspereiratech/openapi-generator-core/security/advisories/new
+    about: Please report security vulnerabilities privately — see SECURITY.md for details.
+  - name: Question or discussion
+    url: https://github.com/rspereiratech/openapi-generator-core/discussions
+    about: For general questions or design discussions, prefer GitHub Discussions over issues.

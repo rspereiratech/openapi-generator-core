@@ -1,0 +1,72 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  repository_dispatch:
+    types: [upstream-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build & test (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [17]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      - name: Checkout parent POM
+        uses: actions/checkout@v6
+        with:
+          repository: rspereiratech/openapi-generator-parent
+          path: openapi-generator-parent
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Install parent POM
+        run: mvn -B -ntp --settings ci-settings.xml -f openapi-generator-parent/pom.xml -DskipTests install
+
+      - name: Build and test
+        run: mvn -B -ntp --settings ci-settings.xml clean verify
+
+      - name: Upload Surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: surefire-reports-java-${{ matrix.java }}
+          path: target/surefire-reports
+          if-no-files-found: ignore
+          retention-days: 7
+
+  trigger-downstream:
+    name: Trigger downstream builds
+    needs: build
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger plugin build
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: rspereiratech/openapi-generator-maven-plugin
+          event-type: upstream-updated

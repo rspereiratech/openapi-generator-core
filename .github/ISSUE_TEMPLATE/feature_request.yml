@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest an improvement or new capability for openapi-generator-core
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please describe the problem you're trying
+        to solve before jumping into a solution — it helps evaluate
+        alternatives and scope.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem or limitation are you facing today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work? Describe the desired behaviour or output.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you have tried or considered, and why they fall short.
+    validations:
+      required: false
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: A small input snippet (controller, POM, configuration, …) illustrating the feature.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: pre-flight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have searched existing issues and could not find a duplicate.
+          required: true
+        - label: My request follows the [Code of Conduct](../CODE_OF_CONDUCT.md).
+          required: true

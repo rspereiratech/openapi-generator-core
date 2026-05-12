@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # Java / Maven dependencies declared in this module's pom.xml.
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - maven
+    commit-message:
+      prefix: deps
+      include: scope
+    groups:
+      test-dependencies:
+        patterns:
+          - "org.junit.*"
+          - "org.mockito:*"
+
+  # GitHub Actions used in .github/workflows/*.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: ci
+      include: scope
