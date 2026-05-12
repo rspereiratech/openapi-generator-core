@@ -5,8 +5,6 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  repository_dispatch:
-    types: [upstream-updated]
   workflow_dispatch:
 
 permissions:
@@ -36,16 +34,6 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: maven
 
-      - name: Checkout parent POM
-        uses: actions/checkout@v6
-        with:
-          repository: rspereiratech/openapi-generator-parent
-          path: openapi-generator-parent
-          token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Install parent POM
-        run: mvn -B -ntp --settings ci-settings.xml -f openapi-generator-parent/pom.xml -DskipTests install
-
       - name: Build and test
         run: mvn -B -ntp --settings ci-settings.xml clean verify
 
@@ -57,16 +45,3 @@ jobs:
           path: target/surefire-reports
           if-no-files-found: ignore
           retention-days: 7
-
-  trigger-downstream:
-    name: Trigger downstream builds
-    needs: build
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'repository_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger plugin build
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          repository: rspereiratech/openapi-generator-maven-plugin
-          event-type: upstream-updated
