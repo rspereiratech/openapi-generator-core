@@ -26,14 +26,21 @@ import io.github.rspereiratech.openapi.generator.core.processor.schema.constrain
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.PositiveConstraintHandler;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.PositiveOrZeroConstraintHandler;
 import io.github.rspereiratech.openapi.generator.core.processor.schema.constraints.SizeConstraintHandler;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import io.github.rspereiratech.openapi.generator.core.utils.TypeUtils;
 import io.swagger.v3.oas.models.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Propagates Jakarta Bean Validation constraints to the corresponding
@@ -76,6 +83,17 @@ import java.util.Map;
  * @see ConstraintHandler
  */
 public class ValidationSchemaEnricher implements SchemaEnricher {
+
+    /**
+     * Constraints that make a property mandatory.
+     *
+     * <p>Swagger's {@code ModelConverters} stopped deriving {@code required} from these in
+     * swagger-core 2.2.29 — it still emits {@code nullable: false} and {@code minLength},
+     * but no longer marks the property as required. This enricher restores that, so the
+     * generated contract does not silently depend on the swagger-core version in use.
+     */
+    private static final List<Class<? extends Annotation>> REQUIRED_CONSTRAINTS =
+            List.of(NotNull.class, NotBlank.class, NotEmpty.class);
 
     /** Ordered chain of handlers consulted in sequence; the first match wins. */
     private final List<ConstraintHandler> handlers;
@@ -171,15 +189,81 @@ public class ValidationSchemaEnricher implements SchemaEnricher {
      * @param clazz  the class whose fields are inspected; must not be {@code null}
      * @param schema the OpenAPI schema whose properties are mutated; must not be {@code null}
      */
-    @SuppressWarnings({"unchecked", "rawtypes"}) // schema.getProperties() returns raw Map<String, Schema>; cast to Schema<?> is safe
     private void applyConstraintsFromClass(Class<?> clazz, Schema<?> schema) {
+        applyConstraintsFromClass(clazz, schema, new HashSet<>());
+        sortRequired(schema);
+    }
+
+    /**
+     * Applies the constraints declared on {@code clazz} to {@code schema}, following
+     * {@link JsonUnwrapped} fields into the flattened type.
+     *
+     * @param clazz   the class whose fields are inspected
+     * @param schema  the schema whose properties are mutated
+     * @param visited classes already traversed on this branch; guards against cycles
+     *                introduced by self-referencing unwrapped types
+     */
+    private void applyConstraintsFromClass(Class<?> clazz, Schema<?> schema, Set<Class<?>> visited) {
+        if (!visited.add(clazz)) {
+            return;
+        }
         Map<String, ?> properties = schema.getProperties();
 
         SchemaEnricherSupport.allDeclaredFields(clazz).forEach(field -> {
-            if (!(properties.get(SchemaEnricherSupport.resolvePropertyName(field)) instanceof Schema<?> property)) return;
+            if (field.isAnnotationPresent(JsonUnwrapped.class)) {
+                Class<?> unwrapped = TypeUtils.toRawClass(field.getGenericType());
+                if (unwrapped != null) {
+                    applyConstraintsFromClass(unwrapped, schema, visited);
+                }
+                return;
+            }
+            String propertyName = SchemaEnricherSupport.resolvePropertyName(field);
+            if (!(properties.get(propertyName) instanceof Schema<?> property)) {
+                return;
+            }
             Arrays.stream(field.getAnnotations())
                     .forEach(ann -> applyConstraint(ann, field.getGenericType(), property));
+            if (impliesRequired(field)) {
+                markRequired(schema, propertyName);
+            }
         });
+    }
+
+    /**
+     * Reports whether any annotation on {@code field} makes the property mandatory.
+     *
+     * <p>{@code @NotNull}, {@code @NotBlank} and {@code @NotEmpty} all reject a missing
+     * value, which is what {@code required} means in OpenAPI.
+     *
+     * @param field the field to inspect
+     * @return {@code true} when the field carries a presence constraint
+     */
+    private static boolean impliesRequired(Field field) {
+        return REQUIRED_CONSTRAINTS.stream().anyMatch(field::isAnnotationPresent);
+    }
+
+    /**
+     * Adds {@code propertyName} to {@code schema}'s {@code required} list, if absent.
+     *
+     * @param schema       the schema to mutate
+     * @param propertyName the property to mark as required
+     */
+    private static void markRequired(Schema<?> schema, String propertyName) {
+        if (schema.getRequired() == null || !schema.getRequired().contains(propertyName)) {
+            schema.addRequiredItem(propertyName);
+        }
+    }
+
+    /**
+     * Sorts the {@code required} list so the emitted spec does not depend on the order in
+     * which the JVM happens to report declared fields.
+     *
+     * @param schema the schema whose required list is normalised
+     */
+    private static void sortRequired(Schema<?> schema) {
+        if (schema.getRequired() != null) {
+            schema.getRequired().sort(null);
+        }
     }
 
     /**

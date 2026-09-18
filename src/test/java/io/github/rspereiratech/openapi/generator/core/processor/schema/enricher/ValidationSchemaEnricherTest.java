@@ -11,6 +11,7 @@
 package io.github.rspereiratech.openapi.generator.core.processor.schema.enricher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.swagger.v3.oas.models.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -86,6 +87,16 @@ class ValidationSchemaEnricherTest {
             @NotNull  String required,
             @NotBlank String nonBlank,
             @NotEmpty String nonEmpty
+    ) {}
+
+    record IdentityDto(
+            @NotBlank String id,
+            @NotBlank String name
+    ) {}
+
+    record UnwrappedDto(
+            @JsonUnwrapped IdentityDto identity,
+            String extra
     ) {}
 
     record NotEmptyListDto(
@@ -518,5 +529,61 @@ class ValidationSchemaEnricherTest {
                         ((Schema<?>) schemas.get("MinMaxDto").getProperties().get("count")).getMinimum(),
                         "@Min(5) on MinMaxDto.count must be applied via nested traversal")
         );
+    }
+
+    // ==========================================================================
+    // required
+    // ==========================================================================
+
+    @Test
+    void apply_presenceConstraints_markPropertiesRequired() {
+        Map<String, Schema<?>> schemas = schemasFor(NotNullDto.class);
+
+        applier.apply(NotNullDto.class, schemas);
+
+        assertEquals(List.of("nonBlank", "nonEmpty", "required"),
+                schemas.get("NotNullDto").getRequired());
+    }
+
+    @Test
+    void apply_withoutPresenceConstraints_leavesRequiredUnset() {
+        Map<String, Schema<?>> schemas = schemasFor(MinMaxDto.class);
+
+        applier.apply(MinMaxDto.class, schemas);
+
+        assertNull(schemas.get("MinMaxDto").getRequired());
+    }
+
+    @Test
+    void apply_jsonUnwrappedField_marksFlattenedPropertiesRequired() {
+        // The unwrapped type's properties are flattened into the parent schema, so the
+        // constraints that make them mandatory live one level down from the schema.
+        Schema<?> parent = new Schema<>();
+        Map<String, Schema> props = new LinkedHashMap<>();
+        props.put("id", new Schema());
+        props.put("name", new Schema());
+        props.put("extra", new Schema());
+        parent.setProperties(new LinkedHashMap<>(props));
+        Map<String, Schema<?>> schemas = new LinkedHashMap<>();
+        schemas.put("UnwrappedDto", parent);
+
+        applier.apply(UnwrappedDto.class, schemas);
+
+        assertAll(
+                () -> assertEquals(List.of("id", "name"), parent.getRequired()),
+                () -> assertEquals(1, ((Schema<?>) parent.getProperties().get("id")).getMinLength()),
+                () -> assertFalse(((Schema<?>) parent.getProperties().get("name")).getNullable())
+        );
+    }
+
+    @Test
+    void apply_calledTwice_doesNotDuplicateRequiredEntries() {
+        Map<String, Schema<?>> schemas = schemasFor(NotNullDto.class);
+
+        applier.apply(NotNullDto.class, schemas);
+        applier.apply(NotNullDto.class, schemas);
+
+        assertEquals(List.of("nonBlank", "nonEmpty", "required"),
+                schemas.get("NotNullDto").getRequired());
     }
 }
