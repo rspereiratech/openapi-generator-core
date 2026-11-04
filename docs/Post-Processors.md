@@ -44,12 +44,14 @@ Scans all `$ref` values across the entire `OpenAPI` model (paths, request bodies
 
 ### `SortSpecPostProcessor`
 
-Sorts two things when `sortOutput` is enabled:
+Sorts four things when `sortOutput` is enabled:
 
 - **Paths** — top-level path strings sorted alphabetically (e.g. `/agents` before `/queues`).
 - **Responses** — HTTP status-code keys within each operation sorted lexicographically (e.g. `"200"` before `"404"`).
+- **Schemas** — keys of `components/schemas` sorted alphabetically.
+- **Schema properties** — the `properties` of every schema sorted alphabetically, recursively, in `components` and in the inline schemas of parameters, request bodies, responses and headers (nested properties, `items`, `additionalProperties`, `allOf`/`anyOf`/`oneOf`/`not`). Each schema is visited once, so shared and self-referencing schemas are safe. `required` needs nothing: swagger-core already keeps it sorted.
 
-Without explicit sorting, both orderings depend on the sequence in which controllers and methods are returned by reflection — which is not stable across JVMs, operating systems, or build environments. This processor ensures every generation run produces the same output, making spec diffs readable and CI comparisons reliable.
+Without explicit sorting, these orderings depend on the sequence in which controllers, methods and properties are returned by reflection — which is not stable across JVMs, operating systems, build environments, or even two runs on the same JVM (property order for a class read through its getters, such as `java.util.Locale`, follows the JVM's method order). This processor ensures every generation run produces the same output, making spec diffs readable and CI comparisons reliable.
 
 The processor is always present in the pipeline. When `sortOutput = false` (the default), `process()` returns immediately without modifying the model. This keeps the factory logic simple — no conditional inclusion is needed.
 
