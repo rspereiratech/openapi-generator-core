@@ -146,6 +146,8 @@ When `true`, enables deterministic output:
 
 - Controllers are sorted alphabetically by canonical class name before processing.
 - The `paths` block is sorted alphabetically after all controllers are processed.
+- Response status codes within each operation, and the `components/schemas` keys, are sorted.
+- The `properties` of every schema are sorted alphabetically, recursively: component schemas and the inline ones in parameters, request bodies, responses and headers, including nested properties, `items`, `additionalProperties` and `allOf`/`anyOf`/`oneOf`/`not`. This matters for classes read through their getters (e.g. `java.util.Locale`), whose property order follows the JVM's method order and can change between runs.
 
 This guarantees that the generated spec is byte-for-byte identical across machines and builds, regardless of filesystem or JVM ordering. Useful for version-controlled spec files where noise-free diffs matter.
 
