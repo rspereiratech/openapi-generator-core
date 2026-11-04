@@ -41,7 +41,7 @@
 
     <servers>
         <server>
-            <id>central</id>
+            <id>central-portal</id>
             <username>${env.CENTRAL_USERNAME}</username>
             <password>${env.CENTRAL_PASSWORD}</password>
         </server>
