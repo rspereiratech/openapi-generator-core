@@ -19,14 +19,36 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
           cache: maven
+
+      # Sibling repos are released one after another: a push here can run before the
+      # parent and upstream modules of the same version reach Maven Central.
+      - name: Wait for upstream releases on Maven Central
+        env:
+          UPSTREAM: openapi-generator-parent
+        run: |
+          VERSION=$(sed -n '/<parent>/,/<\/parent>/s:.*<version>\(.*\)</version>.*:\1:p' pom.xml)
+          if [[ "$VERSION" == *-SNAPSHOT ]]; then
+            echo "Parent is $VERSION: nothing to wait for."
+            exit 0
+          fi
+          for a in $UPSTREAM; do
+            url="https://repo1.maven.org/maven2/io/github/rspereiratech/$a/$VERSION/$a-$VERSION.pom"
+            for i in $(seq 1 120); do
+              if curl -sfI "$url" > /dev/null; then echo "$a $VERSION is on Maven Central."; continue 2; fi
+              echo "Waiting for $a $VERSION ($i/120)..."
+              sleep 30
+            done
+            echo "::error::$a $VERSION is not on Maven Central after 60 minutes."
+            exit 1
+          done
 
       - name: Verify version is not a SNAPSHOT
         run: |
